@@ -1,44 +1,38 @@
-from sqlalchemy import create_engine
-import pandas as pd
-import numpy as np
 import json
+import pandas as pd
+from sqlalchemy import create_engine
 
 
-def process_data_vector(row, start_idx):
-    data_vector = np.array(row).flatten()[start_idx:]
+def _process_data_vector(row, start_idx):
+    data_vector = list(row)[start_idx:]
     min_col_idx = 0
 
     if data_vector[min_col_idx]:
         data_vector[min_col_idx] = float(
             data_vector[min_col_idx][:data_vector[min_col_idx].index(":")]
         )
-
         if data_vector[min_col_idx] == 0.0:
             data_vector = []
         else:
-            data_vector = [float(val) for val in data_vector]
+            data_vector = map(float, data_vector)
     else:
         data_vector = []
 
     return data_vector
 
 
-def get_data_for_player(data, team_id, game_id, player_id, row, start_idx):
+def _get_data_for_player(data, team_id, game_id, player_id, row, start_idx):
     if team_id not in data.keys():
         data[team_id] = {}
-    
     if player_id not in data[team_id].keys():
         data[team_id][player_id] = {}
-
     if game_id not in data[team_id][player_id]:
         data[team_id][player_id][game_id] = []
 
-    data[team_id][player_id][game_id] += list(
-        process_data_vector(row, start_idx)
-    )
+    data[team_id][player_id][game_id] += _process_data_vector(row, start_idx)
 
 
-def get_data_for_game(data, team_id, game_id, player_stats_per_game_conn):
+def _get_data_for_game(data, team_id, game_id, player_stats_per_game_conn):
     df = pd.read_sql_query(
         f'''SELECT * FROM "{game_id}"''', player_stats_per_game_conn
     )
@@ -46,12 +40,12 @@ def get_data_for_game(data, team_id, game_id, player_stats_per_game_conn):
     player_ids = df["PLAYER_ID"]
 
     for i, row in df.iterrows():
-        get_data_for_player(
+        _get_data_for_player(
             data, team_id, game_id, str(player_ids[i]), row, start_idx
         )
 
 
-def get_data_for_team(
+def _get_data_for_team(
     player_stats_per_game_engine, data, team_id, game_stats_conn
 ):
     df = pd.read_sql_query(
@@ -63,7 +57,7 @@ def get_data_for_team(
 
     with player_stats_per_game_engine.connect() as player_stats_per_game_conn:
         for game_id in game_ids:
-            get_data_for_game(
+            _get_data_for_game(
                 data, team_id, str(game_id), player_stats_per_game_conn
             )
 
@@ -82,10 +76,9 @@ def convert_db_to_ml_ready_json(
             game_stats_conn
         )
         team_ids = df[team_id_col_name].tolist()
-
         data = {}
         for team_id in team_ids:
-            get_data_for_team(
+            _get_data_for_team(
                 player_stats_per_game_engine, data, str(team_id),
                 game_stats_conn
             )

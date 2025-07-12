@@ -1,13 +1,13 @@
-from nba_api.stats.static import players
 from nba_api.stats.endpoints import playercareerstats
 from nba_api.stats.endpoints import boxscoretraditionalv2
 from nba_api.stats.endpoints import leaguegamefinder
-import time
+from nba_api.stats.static import players
+import os
 import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy import inspect
-import os
 import sys
+import time
 
 
 custom_headers = {
