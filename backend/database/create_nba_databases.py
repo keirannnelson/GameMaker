@@ -21,7 +21,7 @@ custom_headers = {
 }
 
 
-def save_df_as_table(df, table_name, db_engine, if_exists='replace'):
+def _save_df_as_table(df, table_name, db_engine, if_exists='replace'):
     df.rename(
         columns={col_name: col_name.upper() for col_name in df.columns},
         inplace=True
@@ -31,7 +31,7 @@ def save_df_as_table(df, table_name, db_engine, if_exists='replace'):
     )
 
 
-def update_table(
+def _update_table(
     db_path, engine, batch_limit, data_list, records_processed, saving_func,
     record_ids=None, sleep_time=0.25
 ):
@@ -79,13 +79,13 @@ def get_and_save_player_career_stats(
             record_id, headers=custom_headers, timeout=30
         ).get_data_frames()[0]
         df.drop('PLAYER_ID', axis=1, inplace=True)
-        save_df_as_table(df, str(record_id), engine, if_exists='append')
+        _save_df_as_table(df, str(record_id), engine, if_exists='append')
 
     all_players = players.get_players()
     engine = create_engine(f'sqlite:///{db_path}')
     processed_ids = set(inspect(engine).get_table_names())
     record_ids = [player["id"] for player in all_players]
-    update_table(
+    _update_table(
         db_path, engine, batch_limit, all_players, processed_ids,
         saving_func_for_player_career_stats, record_ids=record_ids
     )
@@ -99,13 +99,13 @@ def get_and_save_player_stats_per_game(
         df = boxscoretraditionalv2.BoxScoreTraditionalV2(
             game_id=record_id, headers=custom_headers, timeout=120
         ).player_stats.get_data_frame()
-        save_df_as_table(df, str(record_id), engine, if_exists='append')
+        _save_df_as_table(df, str(record_id), engine, if_exists='append')
 
     gamefinder = leaguegamefinder.LeagueGameFinder(season_nullable=year)
     game_ids = gamefinder.get_data_frames()[0]['GAME_ID'].unique().tolist()
     engine = create_engine(f'sqlite:///{db_path}')
     processed_ids = set(inspect(engine).get_table_names())
-    update_table(
+    _update_table(
         db_path, engine, batch_limit, game_ids, processed_ids,
         saving_func_for_player_stats_per_game, sleep_time=0.3
         )
@@ -115,7 +115,7 @@ def get_and_save_player_info(db_path="player_info.db"):
     engine = create_engine(f'sqlite:///{db_path}')
     df = pd.DataFrame(players.get_players())
     df.drop('full_name', axis=1, inplace=True)
-    save_df_as_table(df, "player_info", engine)
+    _save_df_as_table(df, "player_info", engine)
     print(f"The table for {db_path} is saved")
 
 
@@ -123,7 +123,7 @@ def get_and_save_game_stats(db_path="game_stats.db", year="2024-25"):
     engine = create_engine(f'sqlite:///{db_path}')
     gamefinder = leaguegamefinder.LeagueGameFinder(season_nullable=year)
     df = gamefinder.get_data_frames()[0]
-    save_df_as_table(df, "game_stats", engine)
+    _save_df_as_table(df, "game_stats", engine)
     print(f"The table for {db_path} is saved")
 
 
