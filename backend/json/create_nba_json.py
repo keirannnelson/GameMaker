@@ -92,7 +92,7 @@ def main():
     #   TEAM_ID: {
     #           PLAYER_ID: {
     #                   GAME_ID: [
-    #                           A list of 30 (float) basketball stats from
+    #                           A list of 20 (float) basketball stats from
     #                           player PLAYER_ID on team TEAM_ID in game
     #                           GAME_ID; an empty list means they played for
     #                           less than a minute or not at all during the
