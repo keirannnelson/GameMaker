@@ -1,0 +1,37 @@
+{% extends "layout.html" %}
+{% block title %}Home - Game Maker{% endblock %}
+
+{% block content %}
+  <div class="home-content" style="padding: 2em; max-width: 800px; margin: auto; font-family: 'Montserrat', sans-serif;">
+    <h1>Welcome to Game Maker</h1>
+    <br>
+    <br> 
+    <p>
+      Game Maker uses machine learning and statistical analysis to predict the winning team and highlight the most impactful players in upcoming games.
+      Whether you’re a fan, analyst, or fantasy league player, our platform helps you make smarter predictions and better understand the game.
+    </p>
+    <p>
+      Select a season, choose your teams, and get predictions powered by advanced models. Stay ahead of the game with real-time insights!
+    </p>
+    <br>Insert photo of completing prediction here<br>
+
+    <a href="{{ url_for('predict') }}" 
+       style="
+         display: inline-block;
+         background-color: #1D428A; /* NBA blue */
+         color: white;
+         padding: 14px 32px;
+         font-weight: 600;
+         font-family: 'Montserrat', sans-serif;
+         font-size: 1.2em;
+         text-transform: uppercase;
+         border: none;
+         border-radius: 0;
+         cursor: pointer;
+         text-decoration: none;
+         margin-top: 2em;
+       ">
+      Start Predicting
+    </a>
+  </div>
+{% endblock %}
