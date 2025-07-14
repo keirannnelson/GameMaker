@@ -1,0 +1,85 @@
+<script src="{{ url_for('static', filename='js/predict.js') }}"></script>
+
+{% extends "layout.html" %}
+{% block title %}Prediction - Game Maker{% endblock %}
+
+
+{% block content %}
+  <div class="main-content">
+    
+    <div class="court-container" style="position: relative; width: 75%;">
+
+      <img
+        src="https://www.wallmonkeys.com/cdn/shop/products/49338347-LRG_1024x1024.jpg?v=1578660927"
+        alt="Basketball Court"
+        style="width: 100%; display: block;"
+      >
+    
+
+      <div id="team1-circles" style="position: absolute; top: 0; left: 0; width: 50%; height: 100%;">
+
+        <div class="circle" style="top: 10%; left: 20%;"></div>
+        <div class="circle" style="top: 30%; left: 35%;"></div>
+        <div class="circle" style="top: 50%; left: 25%;"></div>
+        <div class="circle" style="top: 70%; left: 40%;"></div>
+        <div class="circle" style="top: 85%; left: 20%;"></div>
+      </div>
+    
+
+      <div id="team2-circles" style="position: absolute; top: 0; right: 0; width: 50%; height: 100%;">
+        <div class="circle" style="top: 10%; right: 20%;"></div>
+        <div class="circle" style="top: 30%; right: 35%;"></div>
+        <div class="circle" style="top: 50%; right: 25%;"></div>
+        <div class="circle" style="top: 70%; right: 40%;"></div>
+        <div class="circle" style="top: 85%; right: 20%;"></div>
+      </div>
+    
+    </div>
+    
+
+   
+    <div class="dropdowns">
+      <form method="POST">
+        <label for="year-select">SELECT YEAR</label>
+        <select name="year" id="year-select" required>
+          <option value="" disabled selected>Year</option>
+          <option value="2023">2023</option>
+          <option value="2022">2022</option>
+          <option value="2021">2021</option>
+        </select>
+
+        <label for="team1-select">SELECT TEAM 1</label>
+        <select name="team1" id="team1-select" required>
+          <option value="" disabled selected>TEAM 1</option>
+          <option value="lakers">Los Angeles Lakers</option>
+          <option value="nets">Brooklyn Nets</option>
+          <option value="bucks">Milwaukee Bucks</option>
+        </select>
+
+        <label for="team2-select">SELECT TEAM 2</label>
+        <select name="team2" id="team2-select" required>
+          <option value="" disabled selected>TEAM 2</option>
+          <option value="celtics">Boston Celtics</option>
+          <option value="heat">Miami Heat</option>
+          <option value="warriors">Golden State Warriors</option>
+        </select>
+
+        <button class="predict-btn" type="submit">Predict</button>
+      </form>
+
+      {% if winner %}
+        <div class="results">
+          <h3>Predicted Winner:</h3>
+          <p><strong>{{ winner }}</strong></p>
+
+          <h4>Top Impact Players:</h4>
+          <ul>
+            {% for player in top_players %}
+              <li>{{ player }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
