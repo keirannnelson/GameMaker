@@ -10,11 +10,13 @@ def home():
 def methodology():
     return render_template('methodology.html')
 
+@app.route('/how_to_use')
+def how_to_use():
+    return render_template('how_to_use.html')
 
 @app.route('/predict')
 def predict():
     return render_template('predict.html')
-
 
 if __name__ == '__main__':
     app.run(debug=True)
