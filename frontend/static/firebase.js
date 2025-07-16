@@ -1,12 +1,12 @@
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDf1Xkg0_kqM4ea1Jkv4k4Iekjd3LOfunQ",
-    authDomain: "seotechdev-16059.firebaseapp.com",
-    projectId: "seotechdev-16059",
-    storageBucket: "seotechdev-16059.firebasestorage.app",
-    messagingSenderId: "511975477729",
-    appId: "1:511975477729:web:69ff902a46c946288e42a0",
-    measurementId: "G-KXWFEV10B3"
+    apiKey: "AIzaSyCX1cjeiVjnQjjExt-m1n8baTldB6kkKww",
+    authDomain: "seo-tech-fd7cd.firebaseapp.com",
+    projectId: "seo-tech-fd7cd",
+    storageBucket: "seo-tech-fd7cd.firebasestorage.app",
+    messagingSenderId: "344092136940",
+    appId: "1:344092136940:web:9410e8811424b602b85cc9",
+    measurementId: "G-5KSSNMJP7V"
   };
   
   firebase.initializeApp(firebaseConfig);
