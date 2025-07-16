@@ -4,7 +4,38 @@ from flask import Flask, render_template, request, session, redirect, url_for, j
 import firebase_admin
 from firebase_admin import credentials, auth
 
-
+NBA_TEAMS = (
+            'Atlanta Hawks',
+            'Boston Celtics',
+            'Brooklyn Nets',
+            'Charlotte Hornets',
+            'Chicago Bulls',
+            'Cleveland Cavaliers',
+            'Dallas Mavericks',
+            'Denver Nuggets',
+            'Detroit Pistons',
+            'Golden State Warriors',
+            'Houston Rockets',
+            'Indiana Pacers',
+            'LA Clippers',
+            'South Bay Lakers',
+            'Memphis Grizzlies',
+            'Miami Heat',
+            'Milwaukee Bucks',
+            'Minnesota Timberwolves',
+            'New Orleans Pelicans',
+            'New York Knicks',
+            'Oklahoma City Thunder',
+            'Orlando Magic',
+            'Philadelphia 76ers',
+            'Phoenix Suns',
+            'Portland Trail Blazers',
+            'Sacramento Kings',
+            'San Antonio Spurs',
+            'Toronto Raptors',
+            'Utah Jazz',
+            'Washington Wizards',
+        )
 
 app = Flask(__name__)
 app.secret_key = '2e354a049a01caa6d1b91438f1bfb660f8bceb28c13e28e5e40dc8c8a27233eb'  
@@ -87,61 +118,34 @@ def get_games():
         conn = sqlite3.connect('backend/database/game_stats.db')
         c = conn.cursor()
 
-        nba_teams = (
-            'Atlanta Hawks',
-            'Boston Celtics',
-            'Brooklyn Nets',
-            'Charlotte Hornets',
-            'Chicago Bulls',
-            'Cleveland Cavaliers',
-            'Dallas Mavericks',
-            'Denver Nuggets',
-            'Detroit Pistons',
-            'Golden State Warriors',
-            'Houston Rockets',
-            'Indiana Pacers',
-            'LA Clippers',
-            'South Bay Lakers',
-            'Memphis Grizzlies',
-            'Miami Heat',
-            'Milwaukee Bucks',
-            'Minnesota Timberwolves',
-            'New Orleans Pelicans',
-            'New York Knicks',
-            'Oklahoma City Thunder',
-            'Orlando Magic',
-            'Philadelphia 76ers',
-            'Phoenix Suns',
-            'Portland Trail Blazers',
-            'Sacramento Kings',
-            'San Antonio Spurs',
-            'Toronto Raptors',
-            'Utah Jazz',
-            'Washington Wizards',
-        )
+        
 
         c.execute(f"""
-            SELECT GAME_ID, GAME_DATE, TEAM_ABBREVIATION, TEAM_NAME, WL
+            SELECT GAME_ID, GAME_DATE, TEAM_ABBREVIATION, TEAM_NAME, WL, MATCHUP
             FROM game_stats
             WHERE GAME_DATE >= ?
-            AND TEAM_NAME IN {nba_teams}
+            AND TEAM_NAME IN {NBA_TEAMS}
             ORDER BY GAME_DATE ASC
         """, (next_day_str,))
-        
+        print(next_day_str)
         rows = c.fetchall()
 
         games = {}
         for row in rows:
-            game_id, game_date, abbrev, name, wl = row
+            game_id, game_date, abbrev, name, wl, matchup = row
             if game_id not in games:
                 games[game_id] = []
-            games[game_id].append({'abbrev': abbrev, 'name': name, 'wl': wl})
+            games[game_id].append({'abbrev': abbrev, 'name': name, 'wl': wl, 'home': 'vs.' in matchup})
 
         results = []
         for game_id, teams in games.items():
             if len(teams) == 2:  # Ensure it’s a valid matchup
-                team1 = teams[0]
-                team2 = teams[1]
+                if teams[0]['home']:
+                    team1 = teams[0]
+                    team2 = teams[1]
+                else:
+                    team1 = teams[1]
+                    team2 = teams[0]
 
                 
 
