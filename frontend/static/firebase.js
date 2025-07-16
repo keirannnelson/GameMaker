@@ -1,4 +1,4 @@
-// 🔁 Replace with your Firebase Web SDK config
+
 const firebaseConfig = {
     apiKey: "AIzaSyDf1Xkg0_kqM4ea1Jkv4k4Iekjd3LOfunQ",
     authDomain: "seotechdev-16059.firebaseapp.com",
