@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login - Game Maker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    body {
+      font-family: 'Montserrat', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    nav {
+      width: 100%;
+      height: 50px;
+      background-color: #b22222; /* firebrick red */
+    }
+    nav a {
+    color: white;
+    text-decoration: none;
+    margin-right: 30px;
+    font-weight: bold;
+    font-size: 1.2em;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  
+  nav li {
+    display: inline;
+    list-style: none;
+  }
+  
+    .login-container {
+      max-width: 400px;
+      width: 90%;
+      margin: 3em auto;
+      text-align: center;
+    }
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 1.5em;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1em;
+      font-family: 'Montserrat', sans-serif;
+    }
+    button {
+      width: 100%;
+      background-color: #1D428A;
+      color: white;
+      padding: 14px 0;
+      font-weight: 600;
+      font-size: 1.1em;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Montserrat', sans-serif;
+    }
+    p.signup-text {
+      margin-top: 1.5em;
+      font-size: 0.9em;
+    }
+    p.signup-text a {
+      color: #1D428A;
+      font-weight: 600;
+      text-decoration: none;
+      border: 2px solid #1D428A;
+      padding: 6px 18px;
+      border-radius: 4px;
+      font-family: 'Montserrat', sans-serif;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <nav> <ul>
+    <li><a href="{{ url_for('home') }}">Home</a></li></ul></nav>
+
+  <div class="login-container">
+    <h2 style="color: #1D428A; margin-bottom: 1em;">Login</h2>
+
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+
+    <button onclick="loginUser()">Log In</button>
+
+    <p class="signup-text">
+      Don't have an account? 
+      <a href="/signup">Sign Up</a>
+    </p>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="{{ url_for('static', filename='firebase.js') }}"></script>
+
+  <script>
+    function loginUser() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      firebase.auth().signInWithEmailAndPassword(email, password)
+        .then(userCredential => userCredential.user.getIdToken())
+        .then(idToken => fetch('/sessionLogin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken })
+        }))
+        .then(response => {
+          if (response.ok) {
+            window.location.href = "/";
+          } else {
+            alert("Login failed.");
+          }
+        })
+        .catch(error => alert(error.message));
+    }
+  </script>
+</body>
+</html>
