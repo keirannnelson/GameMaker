@@ -11,7 +11,7 @@ const firebaseConfig = {
   
   firebase.initializeApp(firebaseConfig);
   
-  // 🔐 Signup Function
+
   async function signupUser() {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
@@ -25,7 +25,7 @@ const firebaseConfig = {
     }
   }
   
-  // 🔐 Login Function
+
   async function loginUser() {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
