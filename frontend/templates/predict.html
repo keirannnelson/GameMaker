@@ -4,9 +4,34 @@
 {% block content %}
 <div class="main-content" style="font-family: 'Montserrat', sans-serif; display: flex; gap: 2em; justify-content: center; margin-top: 2em;">
 
- <!-- this is the basketball court img + the cicles/players -->
-  <div style="width: 60%; min-width: 350px;">
 
+  <div style="width: 35%; min-width: 300px;">
+    <label for="date-select" style="font-weight: 600;">SELECT DATE</label>
+    <div style="display: flex; gap: 1em; margin-bottom: 1em;">
+      <input 
+        type="date" 
+        name="game_date" 
+        id="date-select" 
+        required 
+        style="flex-grow: 1; padding: 10px; font-size: 1em; border: 1px solid #ccc; border-radius: 4px;"
+      >
+      <button type="button" onclick="retrieveGames()" style="
+        padding: 10px 16px;
+        background-color: #1D428A;
+        color: white;
+        font-weight: 600;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      ">Retrieve</button>
+    </div>
+
+
+    <div id="games-table-container" style="max-height: 400px; overflow-y: auto;"></div>
+  </div>
+
+
+  <div style="width: 60%; min-width: 350px;">
     <div class="court-container" style="position: relative; width: 100%;">
       <img
         src="https://www.wallmonkeys.com/cdn/shop/products/49338347-LRG_1024x1024.jpg?v=1578660927"
@@ -14,7 +39,7 @@
         style="width: 100%; display: block; margin: 0 auto;"
       >
 
-      
+
       <div id="team1-circles" style="position: absolute; top: 0; left: 0; width: 50%; height: 100%;">
         <div class="circle" style="top: 10%; left: 20%;"></div>
         <div class="circle" style="top: 30%; left: 35%;"></div>
@@ -33,7 +58,7 @@
       </div>
     </div>
 
-   <!-- team1,team2,predict -->
+    <!-- Prediction Form under the court image -->
     <form method="POST" style="display: flex; gap: 1em; align-items: flex-end; margin-top: 1.5em;">
       <div style="flex: 1;">
         <label for="team1-select" style="font-weight: 600;">Team 1</label><br>
@@ -55,46 +80,17 @@
         </select>
       </div>
 
-      <div style="display: flex; flex-direction: column; justify-content: flex-end;">
+      <div>
         <button class="predict-btn" type="submit" style="padding: 10px 20px; background-color: #1D428A; color: white; font-weight: 600; border: none; border-radius: 4px; cursor: pointer;">
           Predict
         </button>
       </div>
     </form>
-
   </div>
-
-  <!-- get date -->
-  <div style="width: 35%; min-width: 300px;">
-    <label for="date-select" style="font-weight: 600;">SELECT DATE</label>
-    <div style="display: flex; gap: 1em; margin-bottom: 1em;">
-      <input 
-        type="date" 
-        name="game_date" 
-        id="date-select" 
-        required 
-        style="flex-grow: 1; padding: 10px; font-size: 1em; border: 1px solid #ccc; border-radius: 4px; font-family: 'Montserrat', sans-serif;"
-      >
-      <button type="button" onclick="retrieveGames()" style="
-        padding: 10px 16px;
-        background-color: #1D428A;
-        color: white;
-        font-weight: 600;
-        font-family: 'Montserrat', sans-serif;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-      ">Retrieve</button>
-    </div>
-
-
-    <div id="games-table-container" style="max-height: 300px; overflow-y: auto;"></div>
-  </div>
-
 </div>
-<!-- makes table-->
+
+
 <script>
-  
   function retrieveGames() {
     const date = document.getElementById("date-select").value;
 
@@ -127,10 +123,11 @@
         ">
           <thead>
             <tr style="background-color: #1D428A; color: white;">
-              <th style="padding: 12px; border: 1px solid #ddd;">Team 1</th>
-              <th style="padding: 12px; border: 1px solid #ddd;">Team 2</th>
-              <th style="padding: 12px; border: 1px solid #ddd;">Team 1 W–L</th>
-              <th style="padding: 12px; border: 1px solid #ddd;">Team 2 W–L</th>
+              <th style="padding: 12px; border: 1px solid #ddd;">Home</th>
+              <th style="padding: 12px; border: 1px solid #ddd;">Home W–L</th>
+              <th style="padding: 12px; border: 1px solid #ddd;">Away</th>
+              
+              <th style="padding: 12px; border: 1px solid #ddd;">Away W–L</th>
             </tr>
           </thead>
           <tbody>
@@ -140,8 +137,9 @@
         tableHTML += `
           <tr style="background-color: #f9f9f9;">
             <td style="padding: 12px; border: 1px solid #ddd;">${game.team1}</td>
-            <td style="padding: 12px; border: 1px solid #ddd;">${game.team2}</td>
             <td style="padding: 12px; border: 1px solid #ddd;">${game.team1_record}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${game.team2}</td>
+            
             <td style="padding: 12px; border: 1px solid #ddd;">${game.team2_record}</td>
           </tr>
         `;
