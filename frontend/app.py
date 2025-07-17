@@ -4,6 +4,7 @@ from flask import Flask, render_template, request, session, redirect, url_for, j
 import firebase_admin
 from firebase_admin import credentials, auth
 from sklearn.metrics import confusion_matrix
+from backend.models.models import pred_old_outcomes_pipeline
 
 NBA_TEAMS = (
             'Atlanta Hawks',
@@ -38,11 +39,25 @@ NBA_TEAMS = (
             'Washington Wizards',
         )
 
+
 app = Flask(__name__)
 app.secret_key = '2e354a049a01caa6d1b91438f1bfb660f8bceb28c13e28e5e40dc8c8a27233eb'  
 
 cred = credentials.Certificate('firebase_config.json')  
 firebase_admin.initialize_app(cred)
+
+# initialize dates
+conn = sqlite3.connect('frontend/backend/database/game_stats.db')
+c = conn.cursor()
+c.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
+seasons = c.fetchall()
+season_dates = {}
+
+for season in seasons:
+    c.execute(f"SELECT MAX(GAME_DATE) FROM '{season[0]}'")
+    date = c.fetchone()
+    season_dates[date[0]] = season[0]
+
 
 @app.route('/')
 def home():
@@ -87,14 +102,22 @@ def logout():
     session.pop('user_email', None)
     return redirect(url_for('home'))
 
-
-
+# Gets correct season
+def get_season(date):
+    season = None
+    for end in season_dates:
+        if end < date:
+            return season
+        
+        season = season_dates[end]
+        
+    return season
 
 # Count current W-L for each team
-def get_record(team_abbrev, c, next_day_str):
-    c.execute("""
+def get_record(team_abbrev, c, next_day_str, season):
+    c.execute(f"""
         SELECT WL
-        FROM game_stats
+        FROM '{season}'
         WHERE TEAM_ABBREVIATION = ?
         AND GAME_DATE < ?
     """, (team_abbrev, next_day_str))
@@ -107,27 +130,32 @@ def get_record(team_abbrev, c, next_day_str):
 def get_games():
     data = request.get_json()
     selected_date = data.get('selected_date')  # format: 'YYYY-MM-DD'
-
     if not selected_date:
         return jsonify({'error': 'Date not provided'}), 400
+
+    
 
     try:
         selected_dt = datetime.strptime(selected_date, "%Y-%m-%d")
         next_day = selected_dt + timedelta(days=1)
         next_day_str = next_day.strftime("%Y-%m-%d")
 
-        conn = sqlite3.connect('backend/database/game_stats.db')
+        season = get_season(next_day_str)
+        if not season:
+            return jsonify({'error': 'Season out of range'})
+
+        conn = sqlite3.connect('frontend/backend/database/game_stats.db')
         c = conn.cursor()
 
         
-
+        print(season)
         c.execute(f"""
             SELECT GAME_ID, GAME_DATE, TEAM_ABBREVIATION, TEAM_NAME, WL, MATCHUP
-            FROM game_stats
-            WHERE GAME_DATE >= ?
+            FROM '{season}'
+            WHERE GAME_DATE = '{next_day_str}'
             AND TEAM_NAME IN {NBA_TEAMS}
             ORDER BY GAME_DATE ASC
-        """, (next_day_str,))
+        """)
         rows = c.fetchall()
 
         games = {}
@@ -162,15 +190,15 @@ def get_games():
                 results.append({
                     'team1': team1['name'],
                     'team2': team2['name'],
-                    'team1_record': get_record(team1['abbrev'], c, next_day_str),
-                    'team2_record': get_record(team2['abbrev'], c, next_day_str),
+                    'team1_record': get_record(team1['abbrev'], c, next_day_str, season),
+                    'team2_record': get_record(team2['abbrev'], c, next_day_str, season),
                 })
 
             #if len(results) == 100:
             #    break
         
         conn.close()
-        return jsonify({'games': results})
+        return jsonify({'games': results, 'season': season[-7:]})
 
     except Exception as e:
         print("Error:", e)
@@ -197,33 +225,38 @@ def get_predictions():
         next_day = selected_dt + timedelta(days=1)
         next_day_str = next_day.strftime("%Y-%m-%d")
 
-        conn = sqlite3.connect('backend/database/game_stats.db')
+        season = get_season(next_day_str)
+        if not season:
+            return jsonify({'error': 'Season out of range'})
+
+        conn = sqlite3.connect('frontend/backend/database/game_stats.db')
         c = conn.cursor()
 
         
 
         c.execute(f"""
-            SELECT GAME_ID, GAME_DATE, TEAM_ABBREVIATION, TEAM_NAME, WL, MATCHUP
-            FROM game_stats
-            WHERE GAME_DATE >= ?
+            SELECT GAME_ID, GAME_DATE, TEAM_ID, TEAM_ABBREVIATION, TEAM_NAME, WL, MATCHUP
+            FROM '{season}'
+            WHERE GAME_DATE = '{next_day_str}'
             AND TEAM_NAME IN {NBA_TEAMS}
             ORDER BY GAME_DATE ASC
-        """, (next_day_str,))
+        """)
         rows = c.fetchall()
         
 
         games = {}
         for row in rows:
-            game_id, game_date, abbrev, name, wl, matchup = row
+            game_id, game_date, team_id, abbrev, name, wl, matchup = row
             if game_id not in games:
                 games[game_id] = []
 
-            games[game_id].append({'abbrev': abbrev, 'name': name, 'wl': wl, 'home': 'vs.' in matchup})
+            games[game_id].append({'id': team_id, 'abbrev': abbrev, 'name': name, 'wl': wl, 'home': 'vs.' in matchup})
 
         matchups = set()
-        predictions = []
-        winners = []
         results = []
+
+        team_ids = []
+
         for game_id, teams in games.items():
             if len(teams) == 2:  # Ensure it’s a valid matchup
                 # set home/away
@@ -240,25 +273,30 @@ def get_predictions():
 
                 matchups.add((team1['abbrev'], team2['abbrev']))
                 
-                prediction, winner = prediction_mock(game_id)
-                predictions.append(prediction)
-                winners.append(winner)
-                
-
+                team_ids += [team1['id'], team2['id']]
 
                 results.append({
                     'team1': team1['name'],
                     'team2': team2['name'],
-                    'team1_record': get_record(team1['abbrev'], c, next_day_str),
-                    'team2_record': get_record(team2['abbrev'], c, next_day_str),
-                    'prediction' : team1['name'] if prediction else team2['name'],
-                    'winner': team1['name'] if winner else team2['name']
+                    'team1_record': get_record(team1['abbrev'], c, next_day_str, season),
+                    'team2_record': get_record(team2['abbrev'], c, next_day_str, season),
                 })
         conn.close()
-        cm = confusion_matrix(winners, predictions)
+        outcomes_preds, final_acc, final_recall, final_precision, final_f1, final_cm = pred_old_outcomes_pipeline(season[-7:], team_ids, next_day_str)
+        for ids, result, in zip(team_ids[::2], results):
+            winner, prediction = outcomes_preds[int(ids)]
+            result['winner'] = int(winner)
+            result['prediction'] = int(prediction)
         
-        return jsonify({'games': results, 'confusion_matrix': [[int(cm[0][0]), int(cm[0][1])], [int(cm[1][0]), int(cm[1][1])]]})
-
+        print(results)
+        print(final_acc, final_recall, final_precision, final_f1)
+        return jsonify({'games': results, 
+                        'confusion_matrix': [[int(final_cm[0][0]), int(final_cm[0][1])], 
+                                             [int(final_cm[1][0]), int(final_cm[1][1])]],
+                        'season': season[-7:],
+                        'stats': {'final_acc': round(final_acc*10, 1), 'final_recall': round(final_recall*10, 2), 'final_precision': round(final_precision*10, 2), 'final_f1': round(final_f1, 2)}
+                        })
+    
     except Exception as e:
         print("Error:", e)
         return jsonify({'error': str(e)}), 500

@@ -33,13 +33,13 @@
         border-radius: 4px;
         cursor: pointer;
       "
-        id="add-col-btn"
       >PREDICT</button>
     </div>
 
 
     <div id="games-table-container" style="max-height: 400px; overflow-y: auto;"></div>
     <div id="predictions-table-container" style="max-height: 400px; overflow-y: auto;"></div>
+    <div id="stats-table-container" style="max-height: 400px; overflow-y: auto;"></div>
   </div>
 
   
@@ -76,7 +76,7 @@
         "
           id="games-table"
         >
-          <caption style="font-weight: 600; font-size= 1em"> Upcoming Games as of ${date}</caption>
+          <caption style="font-weight: 600; font-size= 1em"> Season ${data.season}: Upcoming Games as of ${date}</caption>
           <thead>
             <tr style="background-color: #1D428A; color: white;">
               <th style="padding: 12px; border: 1px solid #ddd;">Home</th>
@@ -133,7 +133,8 @@
         container.innerHTML = "<p>No games found.</p>";
         return;
       }
-
+      console.log(data.stats.final_acc)
+      console.log('working')
       let tableHTML = `
         <table style="
           width: 100%;
@@ -143,7 +144,7 @@
         "
           id="games-table"
         >
-          <caption style="font-weight: 600; font-size= 1em"> Upcoming Games as of ${date}</caption>
+          <caption style="font-weight: 600; font-size= 1em"> Season ${data.season}: Upcoming Games as of ${date}</caption>
           <thead>
             <tr style="background-color: #1D428A; color: white;">
               <th style="padding: 12px; border: 1px solid #ddd;">Home</th>
@@ -206,6 +207,38 @@
           </tbody>
       `
       confusionMatrix.innerHTML = cmHTML
+
+      const statsTable = document.getElementById('stats-table-container')
+      let statsHTML = `
+        <table style="
+          width: 100%;
+          border-collapse: collapse;
+          font-family: 'Montserrat', sans-serif;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        "
+          id="games-table"
+        >
+          <caption style="font-weight: 600; font-size= 1em"> Prediction Stats </caption>
+          <thead>
+            <tr style="background-color: #1D428A; color: white;">
+              <th style="padding: 12px; border: 1px solid #ddd;">Accuracy %</th>
+              <th style="padding: 12px; border: 1px solid #ddd;">Recall %</th>
+              <th style="padding: 12px; border: 1px solid #ddd;">Precision %</th>
+              <th style="padding: 12px; border: 1px solid #ddd;">F1</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr style="background-color: #f9f9f9;">
+              <td style="padding: 12px; border: 1px solid #ddd;">${data.stats.final_acc}</td>
+              <td style="padding: 12px; border: 1px solid #ddd;">${data.stats.final_recall}</td>
+              <td style="padding: 12px; border: 1px solid #ddd;">${data.stats.final_precision}</td>
+              <td style="padding: 12px; border: 1px solid #ddd;">${data.stats.final_f1}</td>
+            </tr>
+          </tbody>
+      `;
+      console.log(data.stats.final_acc)
+      statsTable.innerHTML = statsHTML
 
     })
     .catch(err => {

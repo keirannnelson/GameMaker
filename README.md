@@ -22,6 +22,9 @@ Back End:
 
 API: 
 - Google Firebase Authentication API
+- NBA API
+- ESPN API
+
 
 Database:
 - SQL
