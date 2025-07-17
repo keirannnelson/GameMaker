@@ -103,6 +103,8 @@ def get_and_save_player_stats_per_game(
 
     gamefinder = leaguegamefinder.LeagueGameFinder(season_nullable=year)
     game_ids = gamefinder.get_data_frames()[0]['GAME_ID'].unique().tolist()
+    db_path = db_path[:db_path.index(".")] + year + db_path[db_path.index("."):]
+
     engine = create_engine(f'sqlite:///{db_path}')
     processed_ids = set(inspect(engine).get_table_names())
     _update_table(
@@ -123,7 +125,7 @@ def get_and_save_game_stats(db_path="game_stats.db", year="2024-25"):
     engine = create_engine(f'sqlite:///{db_path}')
     gamefinder = leaguegamefinder.LeagueGameFinder(season_nullable=year)
     df = gamefinder.get_data_frames()[0]
-    _save_df_as_table(df, "game_stats", engine)
+    _save_df_as_table(df, f"game_stats_{year}", engine)
     print(f"The table for {db_path} is saved")
 
 
@@ -131,10 +133,11 @@ def main():
     # Put any and all function calls to the get_and_save-type functions that
     # will restart the script when it hits its batch_limit first; all other
     # functions go last
-    get_and_save_player_career_stats(batch_limit=500)
-    get_and_save_player_stats_per_game(batch_limit=500)
-    get_and_save_player_info()
-    get_and_save_game_stats()
+    # get_and_save_player_career_stats(batch_limit=500)
+    years_to_do = ["2022-23", "2021-22", "2020-21"]
+    get_and_save_player_stats_per_game(batch_limit=500, year=years_to_do[0])
+    # get_and_save_player_info()
+    get_and_save_game_stats(year=years_to_do[0])
 
 
 if __name__ == "__main__":
