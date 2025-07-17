@@ -1,0 +1,46 @@
+{% extends "layout.html" %}
+{% block title %}Glossary - Game Maker{% endblock %}
+
+{% block content %}
+<div class="glossary-content" style="padding: 2em; max-width: 800px; margin: auto; font-family: 'Montserrat', sans-serif;">
+  <h1 style="color: #1D428A; margin-bottom: 1em;">Glossary</h1>
+  <ul style="line-height: 1.8; font-size: 1em; list-style-type: none; padding-left: 0;">
+    <li><strong>FGM</strong>: Field Goals Made</li>
+    <li><strong>FGA</strong>: Field Goals Attempted</li>
+    <li><strong>FG%</strong>: Field Goal % — Shooting percentage</li>
+    <li><strong>FG3M</strong>: 3-Point Field Goals Made</li>
+    <li><strong>FG3A</strong>: 3-Point Field Goals Attempted</li>
+    <li><strong>FG3%</strong>: 3-Point % — Shooting percentage from 3</li>
+    <li><strong>FTM</strong>: Free Throws Made</li>
+    <li><strong>FTA</strong>: Free Throws Attempted</li>
+    <li><strong>FT%</strong>: Free Throw %</li>
+    <li><strong>OREB</strong>: Offensive Rebounds — Rebounds grabbed off your team’s missed shots</li>
+    <li><strong>DREB</strong>: Defensive Rebounds — Rebounds grabbed after opponent misses</li>
+    <li><strong>REB</strong>: Total Rebounds</li>
+    <li><strong>AST</strong>: Assists — Passes leading directly to a made basket</li>
+    <li><strong>STL</strong>: Steals — How many times this player took the ball from an opponent</li>
+    <li><strong>BLK</strong>: Blocks — Shots blocked while defending</li>
+    <li><strong>TO</strong>: Turnovers — Times the player lost the ball to the other team</li>
+    <li><strong>PF</strong>: Personal Fouls — Number of fouls committed by the player</li>
+    <li><strong>PTS</strong>: Total points scored</li>
+    <li><strong>+/-</strong>: Net team score while this player was on the court</li>
+  </ul>
+
+
+  <a href="/backend/database/game_stats.db" download
+   style="
+     display: inline-block;
+     margin-top: 2em;
+     padding: 10px 20px;
+     background-color: #1D428A;
+     color: white;
+     text-decoration: none;
+     font-weight: 600;
+     border-radius: 4px;
+     font-family: 'Montserrat', sans-serif;
+   ">
+  Download Game Stats Database
+</a>
+
+</div>
+{% endblock %}

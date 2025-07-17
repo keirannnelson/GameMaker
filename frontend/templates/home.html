@@ -11,42 +11,61 @@
     </p>
 
     <div style="margin-top: 2em;">
+      {% if user_email %}
+      
+        <p><strong>Logged in as {{ user_email }}</strong></p>
+        <br><br>
+        <a href="/logout"
+           style="
+             display: inline-block;
+             background-color: #1D428A;
+             color: white;
+             padding: 12px 28px;
+             font-weight: 600;
+             font-size: 1em;
+             text-transform: uppercase;
+             border: none;
+             border-radius: 4px;
+             text-decoration: none;
+             margin-right: 1em;
+           ">
+          Log Out
+        </a>
+      {% else %}
+        <a href="/login" 
+           style="
+             display: inline-block;
+             background-color: #1D428A;
+             color: white;
+             padding: 12px 28px;
+             font-weight: 600;
+             font-size: 1em;
+             text-transform: uppercase;
+             border: none;
+             border-radius: 4px;
+             text-decoration: none;
+             margin-right: 1em;
+           ">
+          Log In
+        </a>
 
-      <a href="#" 
-         style="
-           display: inline-block;
-           background-color: #1D428A;
-           color: white;
-           padding: 12px 28px;
-           font-weight: 600;
-           font-size: 1em;
-           text-transform: uppercase;
-           border: none;
-           border-radius: 4px;
-           text-decoration: none;
-           margin-right: 1em;
-         ">
-        Log In
-      </a>
-
-   
-      <a href="#" 
-         style="
-           display: inline-block;
-           background-color: white;
-           color: #1D428A;
-           padding: 12px 28px;
-           font-weight: 600;
-           font-size: 1em;
-           text-transform: uppercase;
-           border: 2px solid #1D428A;
-           border-radius: 4px;
-           text-decoration: none;
-         ">
-        Sign Up
-      </a>
+        <a href="/signup" 
+           style="
+             display: inline-block;
+             background-color: white;
+             color: #1D428A;
+             padding: 12px 28px;
+             font-weight: 600;
+             font-size: 1em;
+             text-transform: uppercase;
+             border: 2px solid #1D428A;
+             border-radius: 4px;
+             text-decoration: none;
+           ">
+          Sign Up
+        </a>
+      {% endif %}
     </div>
-
 
     <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 3em; gap: 1.5em;">
       <div style="flex: 1;">
@@ -61,7 +80,6 @@
       </div>
       <div style="flex-shrink: 0;">
         <img src="https://cdn-icons-png.flaticon.com/512/9304/9304615.png" alt="About Us Icon" style="width: 160px; height: auto;">
-
       </div>
     </div>
   </div>
