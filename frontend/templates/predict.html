@@ -37,9 +37,9 @@
     </div>
 
 
-    <div id="games-table-container" style="max-height: 400px; overflow-y: auto;"></div>
-    <div id="predictions-table-container" style="max-height: 400px; overflow-y: auto;"></div>
-    <div id="stats-table-container" style="max-height: 400px; overflow-y: auto;"></div>
+    <div id="games-table-container" style="margin-top:30px; max-height: 400px; overflow-y: auto;"></div>
+    <div id="predictions-table-container" style="margin-top:30px; max-height: 400px; overflow-y: auto;"></div>
+    <div id="stats-table-container" style="margin-top:30px; max-height: 400px; overflow-y: auto;"></div>
   </div>
 
   
@@ -103,6 +103,11 @@
 
       tableHTML += `</tbody></table>`;
       container.innerHTML = tableHTML;
+
+      const confusionMatrix = document.getElementById('predictions-table-container')
+      confusionMatrix.innerHTML = ''
+      const statsTable = document.getElementById('stats-table-container')
+      statsTable.innerHTML = ''
     })
     .catch(err => {
       console.error(err);
@@ -133,8 +138,7 @@
         container.innerHTML = "<p>No games found.</p>";
         return;
       }
-      console.log(data.stats.final_acc)
-      console.log('working')
+      
       let tableHTML = `
         <table style="
           width: 100%;
@@ -189,18 +193,18 @@
           <thead>
             <tr style="background-color: #1D428A; color: white;">
               <td style="background-color: #f9f9f9;"></td>
-              <th style="padding: 12px; border: 1px solid #ddd;">Predicted Win</th>
-              <th style="padding: 12px; border: 1px solid #ddd;">Predicted Loss</th>
+              <th style="padding: 12px; border: 1px solid #ddd;">Predicted Home Win</th>
+              <th style="padding: 12px; border: 1px solid #ddd;">Predicted Home Loss</th>
             </tr>
           </thead>
           <tbody>
             <tr style="background-color: #1D428A;">
-              <th style="padding: 12px; border: 1px solid #ddd;  color: white;">Actual Win</th>
+              <th style="padding: 12px; border: 1px solid #ddd;  color: white;">Actual Home Win</th>
               <td style="padding: 12px; border: 1px solid #ddd; background-color: #f9f9f9;">${data.confusion_matrix[0][0]}</td>
               <td style="padding: 12px; border: 1px solid #ddd; background-color: #f9f9f9;">${data.confusion_matrix[0][1]}</td>
             </tr>
             <tr style="background-color: #1D428A;">
-              <th style="padding: 12px; border: 1px solid #ddd;  color: white;">Actual Loss</th>
+              <th style="padding: 12px; border: 1px solid #ddd;  color: white;">Actual Home Loss</th>
               <td style="padding: 12px; border: 1px solid #ddd; background-color: #f9f9f9;">${data.confusion_matrix[1][0]}</td>
               <td style="padding: 12px; border: 1px solid #ddd; background-color: #f9f9f9;">${data.confusion_matrix[1][1]}</td>
             </tr>
@@ -230,9 +234,9 @@
 
           <tbody>
             <tr style="background-color: #f9f9f9;">
-              <td style="padding: 12px; border: 1px solid #ddd;">${data.stats.final_acc}</td>
-              <td style="padding: 12px; border: 1px solid #ddd;">${data.stats.final_recall}</td>
-              <td style="padding: 12px; border: 1px solid #ddd;">${data.stats.final_precision}</td>
+              <td style="padding: 12px; border: 1px solid #ddd;">${data.stats.final_acc}%</td>
+              <td style="padding: 12px; border: 1px solid #ddd;">${data.stats.final_recall}%</td>
+              <td style="padding: 12px; border: 1px solid #ddd;">${data.stats.final_precision}%</td>
               <td style="padding: 12px; border: 1px solid #ddd;">${data.stats.final_f1}</td>
             </tr>
           </tbody>
