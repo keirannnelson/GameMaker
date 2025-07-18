@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import sqlite3
-from flask import Flask, render_template, request, session, redirect, url_for, jsonify
+from flask import Flask, render_template, request, session, redirect, url_for, jsonify, send_file
 import firebase_admin
 from firebase_admin import credentials, auth
 from sklearn.metrics import confusion_matrix
@@ -39,6 +39,7 @@ NBA_TEAMS = (
             'Washington Wizards',
         )
 
+DB_PATH = 'backend/database/game_stats.db'
 
 app = Flask(__name__)
 app.secret_key = '2e354a049a01caa6d1b91438f1bfb660f8bceb28c13e28e5e40dc8c8a27233eb'  
@@ -47,7 +48,7 @@ cred = credentials.Certificate('firebase_config.json')
 firebase_admin.initialize_app(cred)
 
 # initialize dates
-conn = sqlite3.connect('frontend/backend/database/game_stats.db')
+conn = sqlite3.connect(DB_PATH)
 c = conn.cursor()
 c.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
 seasons = c.fetchall()
@@ -103,7 +104,7 @@ def logout():
     return redirect(url_for('home'))
 
 # Gets correct season
-def get_season(date):
+def get_season(date, season_dates):
     season = None
     for end in season_dates:
         if end < date:
@@ -122,6 +123,9 @@ def get_record(team_abbrev, c, next_day_str, season):
         AND GAME_DATE < ?
     """, (team_abbrev, next_day_str))
     team_games = c.fetchall()
+    if team_abbrev == 'CHI':
+        print(team_games)
+        print(len(team_games))
     wins = sum(1 for g in team_games if g[0] == 'W')
     losses = sum(1 for g in team_games if g[0] == 'L')
     return f"{wins}-{losses}"
@@ -140,15 +144,14 @@ def get_games():
         next_day = selected_dt + timedelta(days=1)
         next_day_str = next_day.strftime("%Y-%m-%d")
 
-        season = get_season(next_day_str)
+        season = get_season(next_day_str, season_dates)
         if not season:
             return jsonify({'error': 'Season out of range'})
 
-        conn = sqlite3.connect('frontend/backend/database/game_stats.db')
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
 
         
-        print(season)
         c.execute(f"""
             SELECT GAME_ID, GAME_DATE, TEAM_ABBREVIATION, TEAM_NAME, WL, MATCHUP
             FROM '{season}'
@@ -167,7 +170,7 @@ def get_games():
             
             games[game_id].append({'abbrev': abbrev, 'name': name, 'wl': wl, 'home': 'vs.' in matchup})
 
-        matchups = set()
+
         results = []
         for game_id, teams in games.items():
             if len(teams) == 2:  # Ensure it’s a valid matchup
@@ -178,12 +181,6 @@ def get_games():
                 else:
                     team1 = teams[1]
                     team2 = teams[0]
-
-                # Skip redundant matchups
-                if (team1['abbrev'], team2['abbrev']) in matchups:
-                    continue
-
-                matchups.add((team1['abbrev'], team2['abbrev']))
                 
 
                 
@@ -198,20 +195,13 @@ def get_games():
             #    break
         
         conn.close()
+        print(results)
         return jsonify({'games': results, 'season': season[-7:]})
 
     except Exception as e:
         print("Error:", e)
         return jsonify({'error': str(e)}), 500
     
-
-def prediction_mock(game_id):
-    prediction = int(game_id) % 2
-    actual = 0
-    return prediction, actual
-
-
-
 @app.route('/get_predictions', methods=['POST'])
 def get_predictions():
     data = request.get_json()
@@ -225,11 +215,11 @@ def get_predictions():
         next_day = selected_dt + timedelta(days=1)
         next_day_str = next_day.strftime("%Y-%m-%d")
 
-        season = get_season(next_day_str)
+        season = get_season(next_day_str, season_dates)
         if not season:
             return jsonify({'error': 'Season out of range'})
 
-        conn = sqlite3.connect('frontend/backend/database/game_stats.db')
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
 
         
@@ -252,7 +242,6 @@ def get_predictions():
 
             games[game_id].append({'id': team_id, 'abbrev': abbrev, 'name': name, 'wl': wl, 'home': 'vs.' in matchup})
 
-        matchups = set()
         results = []
 
         team_ids = []
@@ -266,12 +255,6 @@ def get_predictions():
                 else:
                     team1 = teams[1]
                     team2 = teams[0]
-
-                # Skip redundant matchups
-                if (team1['abbrev'], team2['abbrev']) in matchups:
-                    continue
-
-                matchups.add((team1['abbrev'], team2['abbrev']))
                 
                 team_ids += [team1['id'], team2['id']]
 
@@ -285,21 +268,25 @@ def get_predictions():
         outcomes_preds, final_acc, final_recall, final_precision, final_f1, final_cm = pred_old_outcomes_pipeline(season[-7:], team_ids, next_day_str)
         for ids, result, in zip(team_ids[::2], results):
             winner, prediction = outcomes_preds[int(ids)]
-            result['winner'] = int(winner)
-            result['prediction'] = int(prediction)
-        
-        print(results)
-        print(final_acc, final_recall, final_precision, final_f1)
+            result['winner'] = 'Home' if winner else 'Away'
+            result['prediction'] = 'Home' if prediction else 'Away'
+
         return jsonify({'games': results, 
                         'confusion_matrix': [[int(final_cm[0][0]), int(final_cm[0][1])], 
                                              [int(final_cm[1][0]), int(final_cm[1][1])]],
                         'season': season[-7:],
-                        'stats': {'final_acc': round(final_acc*10, 1), 'final_recall': round(final_recall*10, 2), 'final_precision': round(final_precision*10, 2), 'final_f1': round(final_f1, 2)}
+                        'stats': {'final_acc': round(final_acc*100, 1), 'final_recall': round(final_recall*100, 2), 'final_precision': round(final_precision*100, 2), 'final_f1': round(final_f1, 2)}
                         })
     
     except Exception as e:
         print("Error:", e)
         return jsonify({'error': str(e)}), 500
+    
+@app.route("/download_db")
+def download_db():
+    path = '../backend/database/game_stats.db'
+    return send_file(path, as_attachment=True)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
