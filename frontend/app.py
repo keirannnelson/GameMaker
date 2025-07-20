@@ -2,9 +2,8 @@ from datetime import datetime, timedelta
 import sqlite3
 from flask import Flask, render_template, request, session, redirect, url_for, jsonify, send_file
 import firebase_admin
-from firebase_admin import credentials, auth
-from sklearn.metrics import confusion_matrix
-from backend.models.models import pred_old_outcomes_pipeline
+from firebase_admin import credentials, auth 
+from backend.models.pipeline import pred_old_outcomes_pipeline
 
 NBA_TEAMS = (
             'Atlanta Hawks',
@@ -44,7 +43,7 @@ DB_PATH = 'backend/database/game_stats.db'
 app = Flask(__name__)
 app.secret_key = '2e354a049a01caa6d1b91438f1bfb660f8bceb28c13e28e5e40dc8c8a27233eb'  
 
-cred = credentials.Certificate('firebase_config.json')  
+cred = credentials.Certificate('frontend/firebase_config.json')  
 firebase_admin.initialize_app(cred)
 
 # initialize dates
@@ -119,7 +118,7 @@ def get_record(team_abbrev, c, next_day_str, season):
     c.execute(f"""
         SELECT WL
         FROM '{season}'
-        WHERE TEAM_ABBREVIATION = ?
+        WHERE TEAM_ID = ?
         AND GAME_DATE < ?
     """, (team_abbrev, next_day_str))
     team_games = c.fetchall()
@@ -153,7 +152,7 @@ def get_games():
 
         
         c.execute(f"""
-            SELECT GAME_ID, GAME_DATE, TEAM_ABBREVIATION, TEAM_NAME, WL, MATCHUP
+            SELECT GAME_ID, GAME_DATE, TEAM_ID, TEAM_NAME, WL, MATCHUP
             FROM '{season}'
             WHERE GAME_DATE = '{next_day_str}'
             AND TEAM_NAME IN {NBA_TEAMS}
@@ -261,8 +260,8 @@ def get_predictions():
                 results.append({
                     'team1': team1['name'],
                     'team2': team2['name'],
-                    'team1_record': get_record(team1['abbrev'], c, next_day_str, season),
-                    'team2_record': get_record(team2['abbrev'], c, next_day_str, season),
+                    'team1_record': get_record(team1['id'], c, next_day_str, season),
+                    'team2_record': get_record(team2['id'], c, next_day_str, season),
                 })
         conn.close()
         outcomes_preds, final_acc, final_recall, final_precision, final_f1, final_cm = pred_old_outcomes_pipeline(season[-7:], team_ids, next_day_str)
@@ -284,8 +283,7 @@ def get_predictions():
     
 @app.route("/download_db")
 def download_db():
-    path = '../backend/database/game_stats.db'
-    return send_file(path, as_attachment=True)
+    return send_file(DB_PATH, as_attachment=True)
 
 
 if __name__ == '__main__':

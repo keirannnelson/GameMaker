@@ -6,7 +6,7 @@
     <h1>Methodology</h1>
     <br><br>
     <p>
-    To enable backtesting across multiple seasons, we restricted our training data to the 2024–25 NBA season. Due to this constraint and the relatively limited volume of game data available via the API – insufficient for effectively training a neural network at least – we chose not to use a time-series-based deep learning approach. Instead, we implemented a structured, fold-based machine learning pipeline centered around a stacked ensemble model for binary classification. This ensemble method leverages the strengths of multiple base models by passing the output of one as input to the next, allowing each model to correct errors made by its predecessor.
+    To enable backtesting across multiple seasons, we restricted our training data to the 2023–24 NBA season. Due to this constraint and the relatively limited volume of game data available via the API – insufficient for effectively training a neural network at least – we chose not to use a time-series-based deep learning approach. Instead, we implemented a structured, fold-based machine learning pipeline centered around a stacked ensemble model for binary classification. This ensemble method leverages the strengths of multiple base models by passing the output of one as input to the next, allowing each model to correct errors made by its predecessor.
     Out of the original 20 basketball statistics, five were redundant because they directly contributed to the calculation of others—either as numerators, denominators in percentage metrics (e.g., FGA and FGM are included in FG_PCT), or as components summed to form aggregate stats. These five redundant features were therefore removed to streamline the dataset. Further, To better structure our features for ensemble learning, we engineered four time-aware statistics – AVG, MAX, BIAS, and MOM – for each of the 15 core basketball statistics (explained in detail on the glossary page). These were computed per game instance in the dataset as follows:
     </p>
     <br>
@@ -64,104 +64,94 @@
     <br><br>
     <h1>Results & Discussion</h1>
     <br>
-    <p>Here, we analyze and break down the results from a single fold – specifically, fold 1 – and present the averages across all folds for each statistic. Furthermore, we include backtesting results for the 2023–24 NBA season. Additional images for your review and analysis are provided in the appendix below.
+    <p>Here, we analyze and break down the results from a single fold – specifically, fold 1 – and present the averages across all folds for each statistic. Furthermore, we include backtesting results for the 2024–25 NBA season. Additional images for your review and analysis are provided in the appendix below.
         Below is the correlation matrix for the features in fold 1’s dataset before feature selection. With 120 features, the matrix is dense and can be challenging to interpret in detail. The key insight lies in the overall density and distribution of strong correlations, which is visually apparent. To enhance clarity, all correlation values below the 0.7 threshold were set to zero and displayed as white cells, simplifying the visualization and highlighting only the most significant feature relationships.
         </p>
-        <img src="{{ url_for('static', filename='images/fig1.png') }}"
+        <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 1.png') }}"
         alt="Feature Correlation Matrix"
-        style="width: 300px; height: 300px; object-fit: cover; border-radius: 8px;">
+        style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
    <br>
-        <p>It is evident that most correlations cluster near the diagonal, indicating strong relationships among closely related features – such as FGM_BIAS and FGM_MOM – which is expected. However, this approach also uncovered less obvious correlations (the ones not near the diagonal), such as between PTS_BIAS_OPP and FG3_PCT_MOM_OPP, highlighting interactions that might otherwise have been overlooked.
+        <p>It is evident that most correlations cluster near the diagonal, indicating strong relationships among closely related features – such as DREB_BIAS and DREB_AVG – which is expected. However, this approach also uncovered less obvious correlations (the ones not near the diagonal), such as between PTS_BIAS_OPP and FG3_PCT_MOM_OPP, highlighting interactions that might otherwise have been overlooked.
         </p>
         <br>
-    <p>After removing all redundant features, 40 remain. This reduction is reflected visually in the much sparser correlation matrix below. Notice that aside from the trivial diagonal (highlighted in red), which represents the perfect self-correlation of each feature, no correlations exceed the 0.7 threshold (indicated by blue). This confirms the effective elimination of highly correlated, redundant features.</p>
-    <img src="{{ url_for('static', filename='images/fig2.png') }}"
+    <p>After removing all redundant features, 53 remain. This reduction is reflected visually in the much sparser correlation matrix below. Notice that aside from the trivial diagonal (highlighted in red), which represents the perfect self-correlation of each feature, no correlations exceed the 0.7 threshold (indicated by blue). This confirms the effective elimination of highly correlated, redundant features.</p>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 1.png') }}"
     alt="Feature Correlation Matrix"
-    style="width: 300px; height: 300px; object-fit: cover; border-radius: 8px;">
-    <br><p>By retaining only one-third of the original features, we significantly reduce training and prediction times while maintaining most of the model’s predictive power.
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br><p>By retaining only about 40% of the original features, we significantly reduce training and prediction times while maintaining most of the model’s predictive power.
         Additionally, the confusion matrix for fold 1 is presented below:
         </p>
     <br>
-    <img src="{{ url_for('static', filename='images/fig3.png') }}"
-    alt="Feature Correlation Matrix"
-    style="width: 300px; height: 300px; object-fit: cover; border-radius: 8px;">
+    <img src="{{ url_for('static', filename='ml_imgs/fold_1_confusion_matrix.png') }}"
+    alt="Feature Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
-    <p>As shown, there are 90 true positives – cases where the model correctly predicted a win (1) and the game outcome was indeed a win – along with 5 true negatives, 57 false positives, and 4 false negatives. From this confusion matrix, fold 1’s recall is 0.96, precision 0.61, F1 score 0.75, and accuracy 60.90%. While these results appear promising, they should be interpreted with caution since fold 1 was evaluated on a relatively small test set, making the metrics susceptible to volatility. This limitation motivated backtesting on a larger dataset, such as all games during the previous NBA season, to gain more knowingly stable estimates. Despite this, fold 1’s performance remains a useful indicator of training behavior and results. Across all 10 folds, the average metrics were: recall at 0.68, precision 0.63, F1 score 0.65, and accuracy 61.35%, with an average optimal classification threshold of 0.5070 – just slightly above the standard threshold of 0.5.</p>
+    <p>As shown, there are 89 true positives – cases where the model correctly predicted a win (1) and the game outcome was indeed a win – along with 30 true negatives, 58 false positives, and 9 false negatives. From this confusion matrix, fold 1’s recall is 0.91, precision 0.61, F1 score 0.73, and accuracy 63.98%. While these results appear promising, they should be interpreted with caution since fold 1 was evaluated on a relatively small test set, making the metrics susceptible to volatility. This limitation motivated backtesting on a larger dataset, such as all games during the previous NBA season, to gain more knowingly stable estimates. Despite this, fold 1’s performance remains a useful indicator of training behavior and results. Across all 10 folds, the average metrics were: recall at 0.72, precision 0.64, F1 score 0.67, and accuracy 62.53%, with an average optimal classification threshold of 0.5670 – above the standard threshold of 0.5.</p>
     <br>
-    <p>As previously noted, we backtested our model using the 2023–24 NBA season games to gain a clearer understanding of its true predictive performance. The corresponding confusion matrix is shown below.
+    <p>As previously noted, we backtested our model using the 2024–25 NBA season games to gain a clearer understanding of its true predictive performance. The corresponding confusion matrix is shown below.
     </p>
     <br>
-    <img src="{{ url_for('static', filename='images/fig4.png') }}"
-    alt="Feature Correlation Matrix"
-    style="width: 300px; height: 300px; object-fit: cover; border-radius: 8px;">
+    <img src="{{ url_for('static', filename='ml_imgs/2024-25_season_confusion_matrix.png') }}"
+    alt="Feature Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
-    <p>As observed, the confusion matrix shows 782 true positives, 454 true negatives, 493 false positives, and 320 false negatives. This corresponds to a recall of 0.71, precision of 0.61, F1 score of 0.66, and accuracy of 60.32%, which aligns closely with the metrics obtained during training. While our model is not without limitations, the results highlight the fundamental uncertainty and complexity involved in predicting basketball game outcomes within the context of sports betting.</p>
+    <p>As observed, the confusion matrix shows 620 true positives, 515 true negatives, 272 false positives, and 313 false negatives. This corresponds to a recall of 0.66, precision of 0.70, F1 score of 0.68, and accuracy of 65.99%, which aligns closely with the metrics obtained during training. While our model is not without limitations, the results highlight the fundamental uncertainty and complexity involved in predicting basketball game outcomes within the context of sports betting.</p>
     <br>
-    <p>Since our data is time series–based, we expect the model’s performance to improve as the season progresses, benefiting from increasingly rich and higher-quality information. This trend is illustrated in the following four metrics-over-time graphs. Note: following standard convention, if the denominator in the calculation of recall, precision, or F1 score is zero, the corresponding metric — while technically undefined — is set to 0.</p>
-    <br>
-    <img src="{{ url_for('static', filename='images/fig5.png') }}"
-    alt="Feature Correlation Matrix"
-    style="width: 300px; height: 300px; object-fit: cover; border-radius: 8px;">
-    <br>
-
-    <img src="{{ url_for('static', filename='images/fig6.png') }}"
-    alt="Feature Correlation Matrix"
-    style="width: 300px; height: 300px; object-fit: cover; border-radius: 8px;">
+    <p>Since the data is time series–based, it is reasonable to expect model performance to degrade as the test window moves further from the training period, due to evolving factors such as team roster changes, player aging, and other dynamic contextual variables. Note: following standard convention, if the denominator in the calculation of recall, precision, or F1 score is zero, the corresponding metric — while technically undefined — is set to 0.</p>
+    <img src="{{ url_for('static', filename='ml_imgs/2024-25_recall_trend_line.png') }}"
+    alt="Recall Trendline"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
 
-    <img src="{{ url_for('static', filename='images/fig7.png') }}"
-    alt="Feature Correlation Matrix"
-    style="width: 300px; height: 300px; object-fit: cover; border-radius: 8px;">
+    <img src="{{ url_for('static', filename='ml_imgs/2024-25_precision_trend_line.png') }}"
+    alt="Precision Trendline"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
 
-    <img src="{{ url_for('static', filename='images/fig8.png') }}"
-    alt="Feature Correlation Matrix"
-    style="width: 300px; height: 300px; object-fit: cover; border-radius: 8px;">
+    <img src="{{ url_for('static', filename='ml_imgs/2024-25_f1_trend_line.png') }}"
+    alt="F1 Trendline"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
 
-    <p>The red trendline in all four graphs shows an upward trajectory, confirming our expectation that the model’s performance improves as the season progresses. Notably, the recall trendline exhibits the steepest slope, aligning with our training objectives. An interesting inflection point occurs around game day 95, where all performance metrics show a marked improvement in their average values, accompanied by reduced variance around those averages.
-    </p>
+    <img src="{{ url_for('static', filename='ml_imgs/2024-25_accuracy_trend_line.png') }}"
+    alt="Accuracy Trendline"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+
+    
+    <p>The red trendline in all four graphs exhibits a slight downward trajectory, aligning with our expectation that model performance gradually declines as the temporal distance from the training window increases. Notably, none of the four metrics vary by more than 0.1 over time, with recall demonstrating the least change—successfully achieving our training objective of prioritizing and stabilizing recall performance.</p>
     <br>
     <br>
     <h1>Appendix</h1>
     <p>All curated images related to the machine learning (ML) model, including those previously shown, will be compiled and presented here.
-        Metrics from testing the ML model on the 2023-24 NBA basketball season.
-        </p>
-    
-        <br>
-
-        <img src="{{ url_for('static', filename='images/fig4.png') }}"
-        alt="Feature Correlation Matrix"
-        style="width: 300px; height: 300px; object-fit: cover; border-radius: 8px;">
-        <br>
-
-        <br>
-
-        <img src="{{ url_for('static', filename='images/fig5.png') }}"
-        alt="Feature Correlation Matrix"
-        style="width: 300px; height: 300px; object-fit: cover; border-radius: 8px;">
-        <br>
-    
-        <br>
-
-    <img src="{{ url_for('static', filename='images/fig6.png') }}"
-    alt="Feature Correlation Matrix"
-    style="width: 300px; height: 300px; object-fit: cover; border-radius: 8px;">
-    <br>
+        Metrics from testing the ML model on the 2024-25 NBA basketball season.
+    </p>
 
     <br>
 
-    <img src="{{ url_for('static', filename='images/fig7.png') }}"
-    alt="Feature Correlation Matrix"
-    style="width: 300px; height: 300px; object-fit: cover; border-radius: 8px;">
+    <img src="{{ url_for('static', filename='ml_imgs/2024-25_season_confusion_matrix.png') }}"
+    alt="Feature Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+      
+    <img src="{{ url_for('static', filename='ml_imgs/2024-25_recall_trend_line.png') }}"
+    alt="Recall Trendline"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
 
+    <img src="{{ url_for('static', filename='ml_imgs/2024-25_precision_trend_line.png') }}"
+    alt="Precision Trendline"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
 
-    <img src="{{ url_for('static', filename='images/fig8.png') }}"
-    alt="Feature Correlation Matrix"
-    style="width: 300px; height: 300px; object-fit: cover; border-radius: 8px;">
+    <img src="{{ url_for('static', filename='ml_imgs/2024-25_f1_trend_line.png') }}"
+    alt="F1 Trendline"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
+
+    <img src="{{ url_for('static', filename='ml_imgs/2024-25_accuracy_trend_line.png') }}"
+    alt="Accuracy Trendline"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
     <p>Metrics from the training process for each of the 10 folds for the ML model. 
     </p>
 
@@ -170,21 +160,203 @@
     <br>
     <p>Correlation matrix before feature selection/reduction:</p>
     <br>
-    <img src="{{ url_for('static', filename='images/pre1.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 1.png') }}"
     alt="Feature Correlation Matrix"
-    style="width: 300px; height: 300px; object-fit: cover; border-radius: 8px;">
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
     <p>Correlation matrix after feature selection/reduction:</p>
     <br>
-    <img src="{{ url_for('static', filename='images/post1.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 1.png') }}"
     alt="Feature Correlation Matrix"
-    style="width: 300px; height: 300px; object-fit: cover; border-radius: 8px;">
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
     <p>Confusion Matrix</p>
     <br>
-    <img src="{{ url_for('static', filename='images/con1.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/fold_1_confusion_matrix.png') }}"
+    alt="Feature Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+    <p>Fold 2:</p>
+    <br>
+    <p>Correlation matrix before feature selection/reduction:</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 2.png') }}"
     alt="Feature Correlation Matrix"
-    style="width: 300px; height: 300px; object-fit: cover; border-radius: 8px;">
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Correlation matrix after feature selection/reduction:</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 2.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Confusion Matrix</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/fold_2_confusion_matrix.png') }}"
+    alt="Feature Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+    <p>Fold 3:</p>
+    <br>
+    <p>Correlation matrix before feature selection/reduction:</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 3.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Correlation matrix after feature selection/reduction:</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 3.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Confusion Matrix</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/fold_3_confusion_matrix.png') }}"
+    alt="Feature Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+    <p>Fold 4:</p>
+    <br>
+    <p>Correlation matrix before feature selection/reduction:</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 4.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Correlation matrix after feature selection/reduction:</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 4.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Confusion Matrix</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/fold_4_confusion_matrix.png') }}"
+    alt="Feature Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+    <p>Fold 5:</p>
+    <br>
+    <p>Correlation matrix before feature selection/reduction:</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 5.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Correlation matrix after feature selection/reduction:</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 5.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Confusion Matrix</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/fold_5_confusion_matrix.png') }}"
+    alt="Feature Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+    <p>Fold 6:</p>
+    <br>
+    <p>Correlation matrix before feature selection/reduction:</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 6.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Correlation matrix after feature selection/reduction:</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 6.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Confusion Matrix</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/fold_6_confusion_matrix.png') }}"
+    alt="Feature Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+    <p>Fold 7:</p>
+    <br>
+    <p>Correlation matrix before feature selection/reduction:</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 7.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Correlation matrix after feature selection/reduction:</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 7.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Confusion Matrix</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/fold_7_confusion_matrix.png') }}"
+    alt="Feature Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+    <p>Fold 8:</p>
+    <br>
+    <p>Correlation matrix before feature selection/reduction:</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 8.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Correlation matrix after feature selection/reduction:</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 8.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Confusion Matrix</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/fold_8_confusion_matrix.png') }}"
+    alt="Feature Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+    <p>Fold 9:</p>
+    <br>
+    <p>Correlation matrix before feature selection/reduction:</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 9.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Correlation matrix after feature selection/reduction:</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 9.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Confusion Matrix</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/fold_9_confusion_matrix.png') }}"
+    alt="Feature Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+    <p>Fold 10:</p>
+    <br>
+    <p>Correlation matrix before feature selection/reduction:</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 10.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Correlation matrix after feature selection/reduction:</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 10.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Confusion Matrix</p>
+    <br>
+    <img src="{{ url_for('static', filename='ml_imgs/fold_10_confusion_matrix.png') }}"
+    alt="Feature Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+
 
   </div>
 {% endblock %}
