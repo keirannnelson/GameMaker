@@ -114,17 +114,14 @@ def get_season(date, season_dates):
     return season
 
 # Count current W-L for each team
-def get_record(team_abbrev, c, next_day_str, season):
+def get_record(team_id, c, next_day_str, season):
     c.execute(f"""
         SELECT WL
         FROM '{season}'
         WHERE TEAM_ID = ?
         AND GAME_DATE < ?
-    """, (team_abbrev, next_day_str))
+    """, (team_id, next_day_str))
     team_games = c.fetchall()
-    if team_abbrev == 'CHI':
-        print(team_games)
-        print(len(team_games))
     wins = sum(1 for g in team_games if g[0] == 'W')
     losses = sum(1 for g in team_games if g[0] == 'L')
     return f"{wins}-{losses}"
