@@ -9,7 +9,7 @@ Key Features
 
 
 ## Preview 
-<img width="1467" height="810" alt="Screenshot 2025-07-16 at 2 40 55 PM" src="https://github.com/user-attachments/assets/748919fc-e35c-4ab2-890f-df06b9277e32" />
+<img width="1467" height="810" alt="Screenshot 2025-07-16 at 2 40 55 PM" src="frontend/static/images/example.png" />
 
 ## Technologies
 Front End:
@@ -40,9 +40,11 @@ cd frontend
 pip install -r requirements.txt
 ```
 
-Afterwards, to run the program, make sure you are in the `frontend` directory and execute the command below.
+Afterwards, you must add your API information from Firebase to the frontend folder with the name 'firebase_config.json'. Next you must set your secret key. To do so create a file named '.env' in the root directory and enter `FIREBASE_SECRET_KEY=YOUR_KEY_HERE`.
+
+Now to run the program, make sure you are in the root directory and execute the command below.
 ```bash
-flask run
+python -m frontend.app
 ```
 
 
