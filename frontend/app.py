@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 import sqlite3
 from flask import Flask, render_template, request, session, redirect, url_for, jsonify, send_file
@@ -41,7 +42,7 @@ NBA_TEAMS = (
 DB_PATH = 'backend/database/game_stats.db'
 
 app = Flask(__name__)
-app.secret_key = '2e354a049a01caa6d1b91438f1bfb660f8bceb28c13e28e5e40dc8c8a27233eb'  
+app.secret_key = os.environ.get('FIREBASE_SECRET_KEY')
 
 cred = credentials.Certificate('frontend/firebase_config.json')  
 firebase_admin.initialize_app(cred)
