@@ -45,8 +45,13 @@ def get_game_stats_data_df(season_year, target_team_ids=None, target_game_date=N
         df = df[df['SEASON_ID'] == f'2{season_year[:season_year.index("-")]}']
     if target_team_ids:
         df = df[df['TEAM_ID'].isin(target_team_ids)]
+        print(df)
     if target_game_date:
         df = df[df['GAME_DATE'] <= target_game_date]
+    if df.empty:
+        return None
+
+
     df['HOME'] = df['MATCHUP'].apply(lambda x: 'vs.' in x if isinstance(x, str) else False).astype(int)
     features = [
         'MIN', 'FGM', 'FGA', 'FG_PCT', 'FG3M', 'FG3A', 'FG3_PCT', 'FTM',
@@ -55,6 +60,7 @@ def get_game_stats_data_df(season_year, target_team_ids=None, target_game_date=N
     ]
     df = df.dropna()
     i = 0
+    
     for team in df['TEAM_ID'].unique():
         team_df = df[df['TEAM_ID'] == team]
         team_sorted = team_df.sort_values('GAME_DATE')

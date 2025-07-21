@@ -5,7 +5,10 @@ from .get_game_stats_data import get_game_stats_data_df
 
 def pred_old_outcomes_pipeline(season_year, target_team_ids=None, target_game_date=None, training_and_testing=False):
     df = get_game_stats_data_df(season_year, target_team_ids=target_team_ids, target_game_date=target_game_date, training_and_testing=training_and_testing)
+    if df is None:
+        return None, None, None, None, None, None
     X, y, home_ids = get_X_and_y(df)
+    
     final_preds, final_acc, final_recall, final_precision, final_f1, final_cm = make_preds(X, y, verbose=False)
     if final_preds is None:
         return None, None, None, None, None, None
