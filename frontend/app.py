@@ -267,7 +267,7 @@ def get_predictions():
             winner, prediction = outcomes_preds[int(ids)]
             result['winner'] = 'Home' if winner else 'Away'
             result['prediction'] = 'Home' if prediction else 'Away'
-
+        print(outcomes_preds)
         return jsonify({'games': results, 
                         'confusion_matrix': [[int(final_cm[0][0]), int(final_cm[0][1])], 
                                              [int(final_cm[1][0]), int(final_cm[1][1])]],
@@ -277,6 +277,7 @@ def get_predictions():
     
     except Exception as e:
         print("Error:", e)
+        
         return jsonify({'error': str(e)}), 500
     
 @app.route("/download_db")
