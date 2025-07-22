@@ -44,7 +44,7 @@ DB_PATH = 'backend/database/game_stats.db'
 app = Flask(__name__)
 app.secret_key = os.environ.get('FIREBASE_SECRET_KEY')
 
-cred = credentials.Certificate('frontend/firebase_config.json')  
+cred = credentials.Certificate('firebase_config.json')  
 firebase_admin.initialize_app(cred)
 
 # initialize dates
