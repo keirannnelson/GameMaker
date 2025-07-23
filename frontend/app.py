@@ -67,6 +67,12 @@ def home():
 @app.route('/methodology')
 def methodology():
     return render_template('methodology.html')
+
+
+@app.route('/matchups')
+def matchups():
+    return render_template('matchups.html')
+            
 @app.route('/login')
 def login():
     return render_template('login.html')
