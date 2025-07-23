@@ -82,9 +82,36 @@
 
   <div class="team-pool" id="team-pool">
     {% set teams = [
-      'Boston Celtics', 'Brooklyn Nets', 'New York Knicks', 'Philadelphia 76ers', 'Toronto Raptors',
-      'Chicago Bulls', 'Cleveland Cavaliers', 'Detroit Pistons', 'Indiana Pacers', 'Milwaukee Bucks',
-      'Atlanta Hawks', 'Charlotte Hornets', 'Miami Heat', 'Orlando Magic', 'Washington Wizards'
+            'Atlanta Hawks',
+            'Boston Celtics',
+            'Brooklyn Nets',
+            'Charlotte Hornets',
+            'Chicago Bulls',
+            'Cleveland Cavaliers',
+            'Dallas Mavericks',
+            'Denver Nuggets',
+            'Detroit Pistons',
+            'Golden State Warriors',
+            'Houston Rockets',
+            'Indiana Pacers',
+            'LA Clippers',
+            'South Bay Lakers',
+            'Memphis Grizzlies',
+            'Miami Heat',
+            'Milwaukee Bucks',
+            'Minnesota Timberwolves',
+            'New Orleans Pelicans',
+            'New York Knicks',
+            'Oklahoma City Thunder',
+            'Orlando Magic',
+            'Philadelphia 76ers',
+            'Phoenix Suns',
+            'Portland Trail Blazers',
+            'Sacramento Kings',
+            'San Antonio Spurs',
+            'Toronto Raptors',
+            'Utah Jazz',
+            'Washington Wizards',
     ] %}
     {% for team in teams %}
       <div class="team" draggable="true" ondragstart="onDragStart(event)">{{ team }}</div>
