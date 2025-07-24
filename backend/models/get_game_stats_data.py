@@ -45,7 +45,6 @@ def get_game_stats_data_df(season_year, target_team_ids=None, target_game_date=N
         df = df[df['SEASON_ID'] == f'2{season_year[:season_year.index("-")]}']
     if target_team_ids:
         df = df[df['TEAM_ID'].isin(target_team_ids)]
-        print(df)
     if target_game_date:
         df = df[df['GAME_DATE'] <= target_game_date]
     if df.empty:
