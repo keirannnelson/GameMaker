@@ -20,7 +20,7 @@ NBA_TEAMS = (
             'Houston Rockets',
             'Indiana Pacers',
             'LA Clippers',
-            'South Bay Lakers',
+            'Los Angeles Lakers',
             'Memphis Grizzlies',
             'Miami Heat',
             'Milwaukee Bucks',
@@ -124,14 +124,65 @@ def get_season(date, season_dates):
 def get_record(team_id, c, next_day_str, season):
     c.execute(f"""
         SELECT WL
-        FROM '{season}'
+        FROM '?'
         WHERE TEAM_ID = ?
         AND GAME_DATE < ?
-    """, (team_id, next_day_str))
+    """, (season, team_id, next_day_str))
     team_games = c.fetchall()
     wins = sum(1 for g in team_games if g[0] == 'W')
     losses = sum(1 for g in team_games if g[0] == 'L')
     return f"{wins}-{losses}"
+
+
+# gets a list of matchups (dictionaries) for the day of that season
+def retrieve_results(season, next_day_str):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+
+    
+    c.execute(f"""
+        SELECT GAME_ID, GAME_DATE, TEAM_ID, TEAM_NAME, WL, MATCHUP
+        FROM '{season}'
+        WHERE GAME_DATE = '{next_day_str}'
+        AND LEAGUE = 'NBA'
+        ORDER BY GAME_DATE ASC
+    """)
+    rows = c.fetchall()
+
+    games = {}
+    for row in rows:
+        game_id, game_date, team_id, name, wl, matchup = row
+        if game_id not in games:
+            games[game_id] = []
+
+        
+        games[game_id].append({'team_id': team_id, 'name': name, 'wl': wl, 'home': 'vs.' in matchup})
+
+    team_ids = []
+    results = []
+    for game_id, teams in games.items():
+        if len(teams) == 2:  # Ensure it’s a valid matchup
+            # set home/away
+            if teams[0]['home']:
+                home = teams[0]
+                away = teams[1]
+            else:
+                home = teams[1]
+                away = teams[0]
+
+                team_ids += [home['team_id'], away['team_id']]
+            
+
+            
+            results.append({
+                'home': home['name'],
+                'away': away['name'],
+                'home_record': get_record(home['team_id'], c, next_day_str, season),
+                'away_record': get_record(away['team_id'], c, next_day_str, season),
+            })
+    conn.close()
+    return results, team_ids
+
 
 @app.route('/get_games', methods=['POST'])
 def get_games():
@@ -140,8 +191,6 @@ def get_games():
     if not selected_date:
         return jsonify({'error': 'Date not provided'}), 400
 
-    
-
     try:
         selected_dt = datetime.strptime(selected_date, "%Y-%m-%d")
         next_day = selected_dt + timedelta(days=1)
@@ -151,65 +200,18 @@ def get_games():
         if not season:
             return jsonify({'error': 'Season out of range'})
 
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-
-        
-        c.execute(f"""
-            SELECT GAME_ID, GAME_DATE, TEAM_ID, TEAM_NAME, WL, MATCHUP
-            FROM '{season}'
-            WHERE GAME_DATE = '{next_day_str}'
-            AND TEAM_NAME IN {NBA_TEAMS}
-            ORDER BY GAME_DATE ASC
-        """)
-        rows = c.fetchall()
-
-        games = {}
-        for row in rows:
-            game_id, game_date, abbrev, name, wl, matchup = row
-            if game_id not in games:
-                games[game_id] = []
-
-            
-            games[game_id].append({'abbrev': abbrev, 'name': name, 'wl': wl, 'home': 'vs.' in matchup})
-
-
-        results = []
-        for game_id, teams in games.items():
-            if len(teams) == 2:  # Ensure it’s a valid matchup
-                # set home/away
-                if teams[0]['home']:
-                    team1 = teams[0]
-                    team2 = teams[1]
-                else:
-                    team1 = teams[1]
-                    team2 = teams[0]
-                
-
-                
-                results.append({
-                    'team1': team1['name'],
-                    'team2': team2['name'],
-                    'team1_record': get_record(team1['abbrev'], c, next_day_str, season),
-                    'team2_record': get_record(team2['abbrev'], c, next_day_str, season),
-                })
-
-            #if len(results) == 100:
-            #    break
-        
-        conn.close()
-        print(results)
-        return jsonify({'games': results, 'season': season[-7:]})
+        results, team_ids = retrieve_results(season, next_day_str)
+        return jsonify({'games': results, 'season': season})
 
     except Exception as e:
         print("Error:", e)
         return jsonify({'error': str(e)}), 500
     
+
 @app.route('/get_predictions', methods=['POST'])
 def get_predictions():
     data = request.get_json()
     selected_date = data.get('selected_date')  # format: 'YYYY-MM-DD'
-
     if not selected_date:
         return jsonify({'error': 'Date not provided'}), 400
 
@@ -218,62 +220,20 @@ def get_predictions():
         next_day = selected_dt + timedelta(days=1)
         next_day_str = next_day.strftime("%Y-%m-%d")
 
+
         season = get_season(next_day_str, season_dates)
         if not season:
             return jsonify({'error': 'Season out of range'})
 
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-
-        
-
-        c.execute(f"""
-            SELECT GAME_ID, GAME_DATE, TEAM_ID, TEAM_ABBREVIATION, TEAM_NAME, WL, MATCHUP
-            FROM '{season}'
-            WHERE GAME_DATE = '{next_day_str}'
-            AND TEAM_NAME IN {NBA_TEAMS}
-            ORDER BY GAME_DATE ASC
-        """)
-        rows = c.fetchall()
-        
-
-        games = {}
-        for row in rows:
-            game_id, game_date, team_id, abbrev, name, wl, matchup = row
-            if game_id not in games:
-                games[game_id] = []
-
-            games[game_id].append({'id': team_id, 'abbrev': abbrev, 'name': name, 'wl': wl, 'home': 'vs.' in matchup})
-
-        results = []
-
-        team_ids = []
-
-        for game_id, teams in games.items():
-            if len(teams) == 2:  # Ensure it’s a valid matchup
-                # set home/away
-                if teams[0]['home']:
-                    team1 = teams[0]
-                    team2 = teams[1]
-                else:
-                    team1 = teams[1]
-                    team2 = teams[0]
-                
-                team_ids += [team1['id'], team2['id']]
-
-                results.append({
-                    'team1': team1['name'],
-                    'team2': team2['name'],
-                    'team1_record': get_record(team1['id'], c, next_day_str, season),
-                    'team2_record': get_record(team2['id'], c, next_day_str, season),
-                })
-        conn.close()
+        results, team_ids = retrieve_results(season, next_day_str)
         outcomes_preds, final_acc, final_recall, final_precision, final_f1, final_cm = pred_old_outcomes_pipeline(season[-7:], team_ids, next_day_str)
+        
         for ids, result, in zip(team_ids[::2], results):
             winner, prediction = outcomes_preds[int(ids)]
             result['winner'] = 'Home' if winner else 'Away'
             result['prediction'] = 'Home' if prediction else 'Away'
-        print(outcomes_preds)
+
+
         return jsonify({'games': results, 
                         'confusion_matrix': [[int(final_cm[0][0]), int(final_cm[0][1])], 
                                              [int(final_cm[1][0]), int(final_cm[1][1])]],
@@ -292,5 +252,9 @@ def download_db():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
 
+    debug = False
+    if debug:
+        app.run(debug=True)
+    else:
+        app.run(host='0.0.0.0', port=5000)
