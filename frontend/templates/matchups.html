@@ -2,174 +2,239 @@
 {% block title %}Matchups - Game Maker{% endblock %}
 
 {% block content %}
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet" />
 
 <style>
-  .container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 2rem;
-    font-family: 'Arial', sans-serif;
+ 
+  #matchup-container {
+    font-family: 'Montserrat', sans-serif;
+    padding: 20px;
+    background-color: #f9f9f9;
   }
 
-  .team-pool, .drop-zone-wrapper {
+  #matchup-container h1 {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  #matchup-date {
+  padding: 20px 14px;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  cursor: pointer;
+}
+
+
+
+
+  .teams-wrapper {
     display: flex;
     justify-content: center;
+    gap: 40px;
     flex-wrap: wrap;
-    gap: 10px;
-    margin: 1rem 0;
   }
 
-  .team {
-    padding: 10px 15px;
+  .conference-box {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    width: 600px;
+    padding: 20px;
+  }
+
+  .conference-box h2 {
+    text-align: center;
+    margin-bottom: 15px;
+  }
+
+  .team-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  
+
+  .team-card {
     background-color: #e0e0e0;
+    padding: 12px;
     border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
     cursor: grab;
     user-select: none;
-    transition: transform 0.2s;
   }
 
-  .team:active {
-    transform: scale(1.05);
-  }
+  .court-area {
+  margin: 40px auto;
+  width: 90%;
+  max-width: 800px;
+  height: 400px;
+  background-image: url('https://www.wallmonkeys.com/cdn/shop/products/49338347-LRG_530x.jpg?v=1578660927');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain; 
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 50px;
+  border-radius: 30px;
+  overflow: hidden;       
+}
+
 
   .drop-zone {
-    width: 220px;
-    height: 100px;
-    border: 2px dashed #ccc;
-    border-radius: 10px;
-    margin: 1rem;
+    width: 35%;
+    height: 150px;
+    border: 2px dashed #1D428A;
+    border-radius: 12px;
+    background-color: rgba(255,255,255,0.8);
+    font-weight: bold;
+    font-size: 1.2rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
-    background-color: #f9f9f9;
-    color: #555;
+    user-select: none;
   }
 
-  .drop-zone.filled {
-    background-color: #d1ecf1;
-    border-color: #17a2b8;
-    color: #004085;
-  }
-
-  button {
-    padding: 0.5rem 1.5rem;
-    background-color: #007BFF;
+  #predict-btn {
+    display: block;
+    margin: 30px auto 0;
+    padding: 12px 32px;
+    font-size: 1.1rem;
+    font-weight: 700;
     color: white;
+    background-color: #1D428A;
     border: none;
     border-radius: 8px;
-    font-weight: bold;
     cursor: pointer;
-    margin-top: 1.5rem;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s ease;
   }
 
-  button:hover {
-    background-color: #0056b3;
-  }
-
-  .zone-label {
-    text-align: center;
-    margin-bottom: 0.5rem;
-    font-weight: bold;
+  #predict-btn:hover {
+    background-color: #1D428A;
   }
 </style>
 
-<div class="container">
-    <h2 style="color: #1D428A;">Select Your Matchup</h2> 
+<div id="matchup-container">
+  <h1 style="color: #1D428A;">Choose Your Matchup</h1>
 
-  <div class="team-pool" id="team-pool">
-    {% set teams = [
-            'Atlanta Hawks',
-            'Boston Celtics',
-            'Brooklyn Nets',
-            'Charlotte Hornets',
-            'Chicago Bulls',
-            'Cleveland Cavaliers',
-            'Dallas Mavericks',
-            'Denver Nuggets',
-            'Detroit Pistons',
-            'Golden State Warriors',
-            'Houston Rockets',
-            'Indiana Pacers',
-            'LA Clippers',
-            'South Bay Lakers',
-            'Memphis Grizzlies',
-            'Miami Heat',
-            'Milwaukee Bucks',
-            'Minnesota Timberwolves',
-            'New Orleans Pelicans',
-            'New York Knicks',
-            'Oklahoma City Thunder',
-            'Orlando Magic',
-            'Philadelphia 76ers',
-            'Phoenix Suns',
-            'Portland Trail Blazers',
-            'Sacramento Kings',
-            'San Antonio Spurs',
-            'Toronto Raptors',
-            'Utah Jazz',
-            'Washington Wizards',
-    ] %}
-    {% for team in teams %}
-      <div class="team" draggable="true" ondragstart="onDragStart(event)">{{ team }}</div>
-    {% endfor %}
-  </div>
-
-  <div class="drop-zone-wrapper">
-    <div>
-      <div class="zone-label" style="color: #1D428A;">Team 1</div>
-      <div class="drop-zone" id="drop1" ondrop="onDrop(event)" ondragover="onDragOver(event)"></div>
+  <div class="teams-wrapper">
+    <div class="conference-box">
+      <h2 style="color: #1D428A;">Western Conference</h2>
+      <div class="team-grid">
+        <div class="team-card" draggable="true">Lakers</div>
+        <div class="team-card" draggable="true">Warriors</div>
+        <div class="team-card" draggable="true">Clippers</div>
+        <div class="team-card" draggable="true">Suns</div>
+        <div class="team-card" draggable="true">Nuggets</div>
+        <div class="team-card" draggable="true">Mavericks</div>
+        <div class="team-card" draggable="true">Grizzlies</div>
+        <div class="team-card" draggable="true">Pelicans</div>
+        <div class="team-card" draggable="true">Timberwolves</div>
+        <div class="team-card" draggable="true">Kings</div>
+        <div class="team-card" draggable="true">Jazz</div>
+        <div class="team-card" draggable="true">Rockets</div>
+        <div class="team-card" draggable="true">Spurs</div>
+        <div class="team-card" draggable="true">Thunder</div>
+        <div class="team-card" draggable="true">Trail Blazers</div>
+      </div>
     </div>
-    <div>
-      <div class="zone-label" style="color: #1D428A;">Team 2</div>
-      <div class="drop-zone" id="drop2" ondrop="onDrop(event)" ondragover="onDragOver(event)"></div>
+
+    <div class="conference-box">
+      <h2 style="color: #1D428A;">Eastern Conference</h2>
+      <div class="team-grid">
+        <div class="team-card" draggable="true">Celtics</div>
+        <div class="team-card" draggable="true">Bucks</div>
+        <div class="team-card" draggable="true">76ers</div>
+        <div class="team-card" draggable="true">Heat</div>
+        <div class="team-card" draggable="true">Knicks</div>
+        <div class="team-card" draggable="true">Cavaliers</div>
+        <div class="team-card" draggable="true">Nets</div>
+        <div class="team-card" draggable="true">Hawks</div>
+        <div class="team-card" draggable="true">Bulls</div>
+        <div class="team-card" draggable="true">Pacers</div>
+        <div class="team-card" draggable="true">Raptors</div>
+        <div class="team-card" draggable="true">Hornets</div>
+        <div class="team-card" draggable="true">Pistons</div>
+        <div class="team-card" draggable="true">Magic</div>
+        <div class="team-card" draggable="true">Wizards</div>
+      </div>
     </div>
   </div>
 
-  <button onclick="handlePredict()" style="padding: 10px 20px; background-color: #1D428A; color: white; font-weight: 600; border: none; border-radius: 4px; cursor: pointer;">Predict</button>
-
+  <div class="court-area">
+    <div class="drop-zone" id="team1-drop">Drop Team 1 Here</div>
+    <div class="drop-zone" id="team2-drop">Drop Team 2 Here</div>
+  </div>
+  <div id="controls" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 30px; flex-wrap: nowrap; max-width: 320px; margin-left: auto; margin-right: auto;">
+    <input
+      type="date"
+      id="matchup-date"
+      style="
+        padding: 10px 14px;
+        font-size: 1rem;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        cursor: pointer;
+        min-width: 150px;
+        max-width: 150px;
+        box-sizing: border-box;
+      "
+    />
+    <button
+      id="predict-btn"
+    >
+      Predict
+    </button>
+  </div>
+  
 </div>
 
 <script>
-    function onDragStart(event) {
-      event.dataTransfer.setData("text/plain", event.target.textContent);
-    }
-  
-    function onDragOver(event) {
-      event.preventDefault();
-    }
-  
-    function onDrop(event) {
-      event.preventDefault();
-      const team = event.dataTransfer.getData("text/plain");
-      const drop1 = document.getElementById("drop1").textContent.trim();
-      const drop2 = document.getElementById("drop2").textContent.trim();
-  
-      if ((drop1 && drop1 === team) || (drop2 && drop2 === team)) {
-        alert("You can't select the same team for both matchups.");
-        return;
-      }
-  
-      const dropZone = event.target;
-      dropZone.textContent = team;
-      dropZone.classList.add("filled");
-    }
-  
-    function handlePredict() {
-      const team1 = document.getElementById("drop1").textContent.trim();
-      const team2 = document.getElementById("drop2").textContent.trim();
+  let draggedTeam;
 
-      //placehodler 4now just remove later
-      if (!team1 || !team2) {
-        alert("Please select both teams.");
-        return;
-      }
-  
-      alert(`Prediction request sent for: ${team1} vs ${team2} (Placeholder prediction)`);
+document.querySelectorAll(".team-card").forEach(card => {
+  card.addEventListener("dragstart", e => {
+    draggedTeam = e.target.innerText;
+  });
+});
+
+document.querySelectorAll(".drop-zone").forEach(zone => {
+  zone.addEventListener("dragover", e => e.preventDefault());
+
+  zone.addEventListener("drop", e => {
+    e.preventDefault();
+
+    const otherZoneId = zone.id === "team1-drop" ? "team2-drop" : "team1-drop";
+    const otherZone = document.getElementById(otherZoneId);
+    const otherTeamName = otherZone.innerText;
+
+    if (otherTeamName === draggedTeam) {
+      alert("Cannot select the same team twice.");
+      return;
     }
-  </script>
-  
+
+    zone.innerText = draggedTeam;
+    zone.style.backgroundColor = "rgba(255,255,255,0.8)";
+  });
+});
+
+
+  document.getElementById("predict-btn").addEventListener("click", () => {
+    const team1 = document.getElementById("team1-drop").innerText;
+    const team2 = document.getElementById("team2-drop").innerText;
+
+    if (team1.includes("Drop") || team2.includes("Drop")) {
+      alert("Please select two teams.");
+      return;
+    }
+    if (team1 === team2) {
+      alert("Please select two different teams.");
+      return;
+    }
+
+    alert(`Predicting matchup between ${team1} and ${team2}!`);
+  });
+</script>
 {% endblock %}
