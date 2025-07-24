@@ -113,10 +113,14 @@ def logout():
 def get_season(date, season_dates):
     season = None
     for end in season_dates:
+        print(end, date)
+        print(end < date)
         if end < date:
             return season
         
+        print(season)
         season = season_dates[end]
+        
         
     return season
 
@@ -124,10 +128,10 @@ def get_season(date, season_dates):
 def get_record(team_id, c, next_day_str, season):
     c.execute(f"""
         SELECT WL
-        FROM '?'
+        FROM '{season}'
         WHERE TEAM_ID = ?
         AND GAME_DATE < ?
-    """, (season, team_id, next_day_str))
+    """, (team_id, next_day_str))
     team_games = c.fetchall()
     wins = sum(1 for g in team_games if g[0] == 'W')
     losses = sum(1 for g in team_games if g[0] == 'L')
@@ -135,16 +139,15 @@ def get_record(team_id, c, next_day_str, season):
 
 
 # gets a list of matchups (dictionaries) for the day of that season
-def retrieve_results(season, next_day_str):
+def retrieve_results(season, next_day_str, league):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
-    
     c.execute(f"""
         SELECT GAME_ID, GAME_DATE, TEAM_ID, TEAM_NAME, WL, MATCHUP
         FROM '{season}'
         WHERE GAME_DATE = '{next_day_str}'
-        AND LEAGUE = 'NBA'
+        AND LEAGUE = '{league}'
         ORDER BY GAME_DATE ASC
     """)
     rows = c.fetchall()
@@ -154,7 +157,6 @@ def retrieve_results(season, next_day_str):
         game_id, game_date, team_id, name, wl, matchup = row
         if game_id not in games:
             games[game_id] = []
-
         
         games[game_id].append({'team_id': team_id, 'name': name, 'wl': wl, 'home': 'vs.' in matchup})
 
@@ -170,8 +172,7 @@ def retrieve_results(season, next_day_str):
                 home = teams[1]
                 away = teams[0]
 
-                team_ids += [home['team_id'], away['team_id']]
-            
+            team_ids += [home['team_id'], away['team_id']]
 
             
             results.append({
@@ -188,20 +189,26 @@ def retrieve_results(season, next_day_str):
 def get_games():
     data = request.get_json()
     selected_date = data.get('selected_date')  # format: 'YYYY-MM-DD'
+    selected_league = data.get('selected_league')
     if not selected_date:
         return jsonify({'error': 'Date not provided'}), 400
+    if not selected_league:
+        return jsonify({'error': 'league not provided'}), 400
+ 
 
     try:
         selected_dt = datetime.strptime(selected_date, "%Y-%m-%d")
         next_day = selected_dt + timedelta(days=1)
         next_day_str = next_day.strftime("%Y-%m-%d")
-
-        season = get_season(next_day_str, season_dates)
+        # Fix get season errors
+        #season = get_season(next_day_str, season_dates)
+        season = 'game_stats_2024-25'
         if not season:
-            return jsonify({'error': 'Season out of range'})
+            return jsonify({'error': 'Season out of range'}), 400
 
-        results, team_ids = retrieve_results(season, next_day_str)
-        return jsonify({'games': results, 'season': season})
+        results, team_ids = retrieve_results(season, next_day_str, selected_league)
+        
+        return jsonify({'games': results, 'season': season[-7:]})
 
     except Exception as e:
         print("Error:", e)
@@ -212,6 +219,7 @@ def get_games():
 def get_predictions():
     data = request.get_json()
     selected_date = data.get('selected_date')  # format: 'YYYY-MM-DD'
+    selected_league = data.get('selected_league')
     if not selected_date:
         return jsonify({'error': 'Date not provided'}), 400
 
@@ -220,19 +228,20 @@ def get_predictions():
         next_day = selected_dt + timedelta(days=1)
         next_day_str = next_day.strftime("%Y-%m-%d")
 
-
-        season = get_season(next_day_str, season_dates)
+        # fix get season
+        #season = get_season(next_day_str, season_dates)
+        season = 'game_stats_2024-25'
         if not season:
             return jsonify({'error': 'Season out of range'})
 
-        results, team_ids = retrieve_results(season, next_day_str)
+        results, team_ids = retrieve_results(season, next_day_str, selected_league)
+        print(team_ids)
         outcomes_preds, final_acc, final_recall, final_precision, final_f1, final_cm = pred_old_outcomes_pipeline(season[-7:], team_ids, next_day_str)
         
         for ids, result, in zip(team_ids[::2], results):
             winner, prediction = outcomes_preds[int(ids)]
             result['winner'] = 'Home' if winner else 'Away'
             result['prediction'] = 'Home' if prediction else 'Away'
-
 
         return jsonify({'games': results, 
                         'confusion_matrix': [[int(final_cm[0][0]), int(final_cm[0][1])], 
