@@ -126,7 +126,7 @@ def train_model(X, y, get_corr_matrix=False, save_conf_matrix=False):
         recall = recall_score(y_test, y_pred, zero_division=0)
         precision = precision_score(y_test, y_pred, zero_division=0)
         f1 = f1_score(y_test, y_pred, zero_division=0)
-        cm = confusion_matrix(y_test, y_pred, labels=[0, 1])
+        cm = confusion_matrix(y_test, y_pred, labels=[1, 0])
 
         accuracies.append(acc)
         recalls.append(recall)
@@ -192,7 +192,7 @@ def make_preds(X, y, verbose=False, get_conf_matrix_img=False, season_year="Test
         recall = recall_score(y_test, y_preds)
         precision = precision_score(y_test, y_preds)
         f1 = f1_score(y_test, y_preds)
-        cm = confusion_matrix(y_test, y_preds, labels=[0, 1])
+        cm = confusion_matrix(y_test, y_preds, labels=[1, 0])
         accs.append(acc)
         recalls.append(recall)
         pres.append(precision)
@@ -206,7 +206,7 @@ def make_preds(X, y, verbose=False, get_conf_matrix_img=False, season_year="Test
     final_recall = recall_score(y, final_preds, zero_division=0)
     final_precision = precision_score(y, final_preds, zero_division=0)
     final_f1 = f1_score(y, final_preds, zero_division=0)
-    final_cm = confusion_matrix(y, final_preds, labels=[0, 1])
+    final_cm = confusion_matrix(y, final_preds, labels=[1, 0])
 
     if verbose:
         print("-" * 100)
