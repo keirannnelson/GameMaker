@@ -4,7 +4,7 @@ import sqlite3
 from flask import Flask, render_template, request, session, redirect, url_for, jsonify, send_file
 import firebase_admin
 from firebase_admin import credentials, auth 
-from backend.models.pipeline import pred_old_outcomes_pipeline
+from backend.ml_model.pipeline import pred_old_outcomes_pipeline
 
 NBA_TEAMS = (
             'Atlanta Hawks',
@@ -39,7 +39,7 @@ NBA_TEAMS = (
             'Washington Wizards',
         )
 
-DB_PATH = 'backend/database/game_stats.db'
+DB_PATH = 'backend/database/nba_game_stats.db'
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FIREBASE_SECRET_KEY')

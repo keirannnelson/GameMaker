@@ -6,7 +6,7 @@ from frontend.app import get_record
 class test_get_record(unittest.TestCase):
     
     def setUp(self):
-        db_path = '../backend/database/game_stats.db'
+        db_path = '../backend/database/nba_game_stats.db'
         self.connection = sqlite3.Connection(db_path)
         self.cursor = self.connection.cursor()
         

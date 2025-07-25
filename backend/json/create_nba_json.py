@@ -61,7 +61,7 @@ def _get_data_for_team(
 
 
 def convert_db_to_ml_ready_json(
-    game_stats_db_path="sqlite:///../database/game_stats.db",
+    game_stats_db_path="sqlite:///../database/nba_game_stats.db",
     player_stats_per_game_db_path="sqlite:///../database/player_stats_per_game.db"
 ):
     game_stats_engine = create_engine(game_stats_db_path)

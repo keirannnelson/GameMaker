@@ -1,6 +1,6 @@
 import unittest
 
-from backend.models.pipeline import pred_old_outcomes_pipeline
+from backend.ml_model.pipeline import pred_old_outcomes_pipeline
 
 class test_model_pipeline(unittest.TestCase):
 
