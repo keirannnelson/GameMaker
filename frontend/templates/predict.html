@@ -32,7 +32,7 @@
       </select>
       
 
-      <button type="button" onclick="retrieveGames()" style="
+      <button type="button" id="retrieve-button" onclick="retrieveGames()" style="
         padding: 10px 16px;
         background-color: #1D428A;
         color: white;
@@ -67,6 +67,8 @@
   function retrieveGames() {
     const date = document.getElementById("date-select").value;
     const league = document.getElementById("league-select").value;
+    const retrieveButton = document.getElementById("retrieve-button")
+    retrieveButton.textContent = 'Loading...'
 
     if (!date) {
       alert("Please select a date.");
@@ -85,6 +87,7 @@
       const container = document.getElementById("games-table-container");
       if (data.games.length === 0) {
         container.innerHTML = "<p>No games found.</p>";
+        retrieveButton.textContent = "Retrieve"
         return;
       }
 
@@ -129,8 +132,10 @@
       confusionMatrix.innerHTML = ''
       const statsTable = document.getElementById('stats-table-container')
       statsTable.innerHTML = ''
+      retrieveButton.textContent = 'Retrieve'
     })
     .catch(err => {
+      retrieveButton.textContent = 'Retrieve'
       console.error(err);
       alert("Failed to retrieve games.");
     });
@@ -140,7 +145,8 @@
   function predictGames() {
     const date = document.getElementById("date-select").value;
     const league = document.getElementById("league-select").value;
-
+    const predButton = document.getElementById("predict-button");
+    predButton.textContent = "Loading..."
 
     if (!date) {
       alert("Please select a date.");
@@ -159,6 +165,7 @@
       const container = document.getElementById("games-table-container");
       if (data.games.length === 0) {
         container.innerHTML = "<p>No games found.</p>";
+        predButton.textContent = "Predict"
         return;
       }
       
@@ -266,9 +273,10 @@
       `;
       
       statsTable.innerHTML = statsHTML
-
+      predButton.textContent = "Predict"
     })
     .catch(err => {
+      predButton.textContent = "Predict"
       console.error(err);
       alert("Failed to retrieve games.");
     });
