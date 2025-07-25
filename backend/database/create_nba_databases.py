@@ -121,7 +121,7 @@ def get_and_save_player_info(db_path="player_info.db"):
     print(f"The table for {db_path} is saved")
 
 
-def get_and_save_game_stats(db_path="game_stats.db", year="2024-25"):
+def get_and_save_game_stats(db_path="nba_game_stats.db", year="2024-25"):
     engine = create_engine(f'sqlite:///{db_path}')
     gamefinder = leaguegamefinder.LeagueGameFinder(season_nullable=year)
     df = gamefinder.get_data_frames()[0]
