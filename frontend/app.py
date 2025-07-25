@@ -4,9 +4,10 @@ import sqlite3
 from flask import Flask, render_template, request, session, redirect, url_for, jsonify, send_file
 import firebase_admin
 from firebase_admin import credentials, auth 
-from backend.models.pipeline import pred_old_outcomes_pipeline
+from backend.models.pred_pipeline import pred_historic_model_old_outcomes_pipeline
 
-DB_PATH = 'backend/database/nba_game_stats.db'
+DB_PATH = 'backend/database/game_stats_full.db'
+LEAGUE_TO_MODEL_LEAGUE = {'NBA': 'nba', 'NCAAMB_D1': 'ncaa'}
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FIREBASE_SECRET_KEY')
@@ -121,7 +122,7 @@ def retrieve_results(season, next_day_str, league):
         if league == 'NCAAMB_D1':
             games[game_id].append({'team_id': team_id, 'name': f'{name} ({abbrev})', 'wl': wl, 'home': 'vs.' in matchup})
         else:
-            games[game_id].append({'team_id': team_id, 'name': name, 'wl': wl, 'home': 'vs.' in matchup})
+            games[game_id].append({'team_id': int(team_id), 'name': name, 'wl': wl, 'home': 'vs.' in matchup})
 
     team_ids = []
     results = []
@@ -198,18 +199,19 @@ def get_predictions():
         if not results:
             return jsonify({'games': results})
         
-        outcomes_preds, final_acc, final_recall, final_precision, final_f1, final_cm = pred_old_outcomes_pipeline(season[-7:], team_ids, next_day_str)
-        print(outcomes_preds)
+        outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = pred_historic_model_old_outcomes_pipeline(LEAGUE_TO_MODEL_LEAGUE[selected_league], season[-7:], 60, target_team_ids=team_ids, target_game_date=next_day_str)
+        
         for ids, result, in zip(team_ids[::2], results):
-            winner, prediction = outcomes_preds[int(ids)]
+            winner = outcomes_preds[f'{next_day_str}:{ids}'][0]
+            prediction = outcomes_preds[f'{next_day_str}:{ids}'][1]
             result['winner'] = 'Home' if winner else 'Away'
             result['prediction'] = 'Home' if prediction else 'Away'
 
         return jsonify({'games': results, 
-                        'confusion_matrix': [[int(final_cm[0][0]), int(final_cm[0][1])], 
-                                             [int(final_cm[1][0]), int(final_cm[1][1])]],
+                        'confusion_matrix': [[int(cms[0][0][0]), int(cms[0][0][1])], 
+                                             [int(cms[0][1][0]), int(cms[0][1][1])]],
                         'season': season[-7:],
-                        'stats': {'final_acc': round(final_acc*100, 1), 'final_recall': round(final_recall*100, 2), 'final_precision': round(final_precision*100, 2), 'final_f1': round(final_f1, 2)}
+                        'stats': {'final_acc': round(accs[0]*100, 1), 'final_recall': round(recalls[0]*100, 2), 'final_precision': round(precisions[0]*100, 2), 'final_f1': round(f1s[0], 2)}
                         })
     
     except Exception as e:
@@ -225,7 +227,7 @@ def download_db():
 def get_teams():
     league = request.args.get('league', 'NBA')
     try:
-        conn = sqlite3.connect('/Users/alyssaking/Desktop/frontend/game_stats.db')
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         
         c.execute("""
@@ -277,7 +279,7 @@ TEAM_ABBREVIATION_MAP = {
   "Washington Wizards": "WAS",
 }
 
-def retrieve_results_matchups(season, next_day_str, team1, team2):
+def retrieve_results_matchups(season, next_day_str, team1, team2, league):
     team1_abbr = TEAM_ABBREVIATION_MAP.get(team1)
     team2_abbr = TEAM_ABBREVIATION_MAP.get(team2)
 
@@ -291,7 +293,7 @@ def retrieve_results_matchups(season, next_day_str, team1, team2):
         SELECT GAME_ID, GAME_DATE, TEAM_ID, TEAM_NAME, WL, MATCHUP
         FROM '{season}'
         WHERE GAME_DATE = ?
-        AND LEAGUE = 'NBA'
+        AND LEAGUE = '{league}'
     """, (next_day_str,))
     
     rows = c.fetchall()
@@ -304,7 +306,6 @@ def retrieve_results_matchups(season, next_day_str, team1, team2):
         if team1_abbr in matchup and team2_abbr in matchup:
             if game_id not in games:
                 games[game_id] = []
-
             games[game_id].append({
                 'team_id': team_id,
                 'name': name,
@@ -338,7 +339,9 @@ def get_matchups():
     selected_date = data.get('selected_date')  # format: 'YYYY-MM-DD'
     team1 = data.get('team1')  # Full name
     team2 = data.get('team2')  # Full name
-
+    selected_league = data.get('selected_league')  # Full name
+    
+    print(selected_date, team1, team2)
     if not (selected_date and team1 and team2):
         return jsonify({'error': 'Missing required fields'}), 400
 
@@ -351,8 +354,8 @@ def get_matchups():
         if not season:
             return jsonify({'error': 'Season out of range'}), 400
 
-        results, team_ids = retrieve_results_matchups(season, next_day_str, team1, team2)
-        return jsonify({'games': results, 'season': season})
+        results, team_ids = retrieve_results_matchups(season, next_day_str, team1, team2, selected_league)
+        return jsonify({'games': results, 'season': season[-7:]})
 
     except Exception as e:
         print("Error:", e)
