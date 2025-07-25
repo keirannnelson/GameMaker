@@ -32,25 +32,25 @@ def pred_historic_model_old_outcomes_pipeline(
             X, y, league, num_sims=1000
         )
 
-    if det_preds is None:
-        return (None,) * 7
-    with open(
-            f"backend/models/acc_thresholds/{league}_acc_per_thresholds_home.json", "r"
-    ) as f:
-        acc_per_thresholds_home = json.load(f)
+        if det_preds is None:
+            return (None,) * 7
+        with open(
+                f"backend/models/acc_thresholds/{league}_acc_per_thresholds_home.json", "r"
+            ) as f:
+            acc_per_thresholds_home = json.load(f)
 
-        min_threshold = acc_per_thresholds_home[str(user_min_acc)][1]
-        sim_preds = (np.array(sim_probs) > min_threshold).astype(int)
+            min_threshold = acc_per_thresholds_home[str(user_min_acc)][1]
+            sim_preds = (np.array(sim_probs) > min_threshold).astype(int)
 
-        outcomes_preds = {
-            f"{game_date}:{home_id}": (true_label, det_pred, det_prob[0],
-                                       sim_pred, sim_prob, CI) for
-            home_id, game_date, true_label, det_pred, det_prob,
-            sim_pred, sim_prob, CI in zip(
-                home_ids, game_dates, y, det_preds, det_probs, sim_preds,
-                sim_probs, CIs
+            outcomes_preds = {
+                f"{game_date}:{home_id}": (true_label, det_pred, det_prob[0],
+                                        sim_pred, sim_prob, CI) for
+                home_id, game_date, true_label, det_pred, det_prob,
+                sim_pred, sim_prob, CI in zip(
+                    home_ids, game_dates, y, det_preds, det_probs, sim_preds,
+                    sim_probs, CIs
             )
-        }
+            }
 
         det_acc = accuracy_score(y, det_preds)
         det_recall = recall_score(y, det_preds, zero_division=0)
