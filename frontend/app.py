@@ -52,6 +52,7 @@ def signup():
 def get_games_range():
     data = request.get_json()
     selected_dates = data.get('selected_dates', [])
+    selected_league = data.get('selected_league')
 
     if not selected_dates:
         return jsonify({'error': 'No dates provided'}), 400
@@ -69,19 +70,22 @@ def get_games_range():
             continue
 
         c.execute(f"""
-            SELECT GAME_ID, GAME_DATE, TEAM_ID, TEAM_NAME, WL, MATCHUP
+            SELECT GAME_ID, GAME_DATE, TEAM_ID, TEAM_NAME, WL, MATCHUP, TEAM_ABBREVIATION
             FROM '{season}'
             WHERE GAME_DATE = ?
-            AND TEAM_NAME IN {NBA_TEAMS}
+            AND LEAGUE = '{selected_league}'
             ORDER BY GAME_DATE ASC
         """, (date_str,))
         rows = c.fetchall()
 
         games = {}
         for row in rows:
-            game_id, game_date, team_id, name, wl, matchup = row
+            game_id, game_date, team_id, name, wl, matchup, abbrev = row
             if game_id not in games:
                 games[game_id] = []
+
+            if selected_league == 'NCAAMB_D1':
+                name = f'{name} ({abbrev})'
 
             # Determine home team by checking 'vs.' in matchup
             is_home = 'vs.' in matchup
@@ -100,12 +104,13 @@ def get_games_range():
                     team2 = teams[0]
 
                 results.append({
-                    'team1': team1['name'],
-                    'team2': team2['name'],
-                    'team1_record': get_record(team1['id'], c, date_str, season),
-                    'team2_record': get_record(team2['id'], c, date_str, season),
+                    'home': team1['name'],
+                    'away': team2['name'],
+                    'home_record': get_record(team1['id'], c, date_str, season),
+                    'away_record': get_record(team2['id'], c, date_str, season),
                 })
-
+        
+        print(results)
         all_games[date_str] = results
 
     conn.close()
@@ -215,13 +220,13 @@ def retrieve_results(season, next_day_str, league):
 @app.route('/get_games', methods=['POST'])
 def get_games():
     data = request.get_json()
-    selected_date = data.get('selected_date')  # format: 'YYYY-MM-DD'
+    selected_date = data.get('selected_dates')  # format: 'YYYY-MM-DD'
     selected_league = data.get('selected_league')
     if not selected_date:
         return jsonify({'error': 'Date not provided'}), 400
     if not selected_league:
         return jsonify({'error': 'league not provided'}), 400
- 
+    print(selected_date)
 
     try:
         selected_dt = datetime.strptime(selected_date, "%Y-%m-%d")
@@ -423,6 +428,113 @@ def get_matchups():
     except Exception as e:
         print("Error:", e)
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/get_predictions_range', methods=['POST'])
+def get_predictions_range():
+    data = request.get_json()
+    selected_dates = data.get('selected_dates', [])
+    selected_league = data.get('selected_league')
+
+    if not selected_dates:
+        return jsonify({'error': 'No dates provided'}), 400
+
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+
+    all_games = {}
+    all_ids = {}
+    for date_str in selected_dates:
+        # Use your existing get_season helper to find the season for this date
+        season = get_season(date_str, season_dates)
+        if not season:
+            all_games[date_str] = []
+            continue
+
+        c.execute(f"""
+            SELECT GAME_ID, GAME_DATE, TEAM_ID, TEAM_NAME, WL, MATCHUP, TEAM_ABBREVIATION
+            FROM '{season}'
+            WHERE GAME_DATE = ?
+            AND LEAGUE = '{selected_league}'
+            ORDER BY GAME_DATE ASC
+        """, (date_str,))
+        rows = c.fetchall()
+
+        games = {}
+        for row in rows:
+            game_id, game_date, team_id, name, wl, matchup, abbrev = row
+            if game_id not in games:
+                games[game_id] = []
+
+            # Determine home team by checking 'vs.' in matchup
+            is_home = 'vs.' in matchup
+            if selected_league == 'NCAAMB_D1':
+                name = f'{name} ({abbrev})'
+            games[game_id].append({'id': team_id, 'name': name, 'wl': wl, 'home': is_home})
+
+        # Format the games results as you do in /get_games
+        results = []
+        team_ids = []
+        for game_id, teams in games.items():
+            if len(teams) == 2:
+                # Set home/away correctly
+                if teams[0]['home']:
+                    home = teams[0]
+                    away = teams[1]
+                else:
+                    home = teams[1]
+                    away = teams[0]
+                if selected_league == 'NBA':
+                    home['id'] = int(home['id'])
+                    away['id'] = int(away['id'])
+
+                team_ids += [home['id'], away['id']]
+                
+                results.append({
+                    'home': home['name'],
+                    'away': away['name'],
+                    'home_record': get_record(home['id'], c, date_str, season),
+                    'away_record': get_record(away['id'], c, date_str, season),
+                })
+        
+        print(results)
+        all_ids[date_str] = team_ids
+        all_games[date_str] = results
+
+    conn.close()
+    sum_cm = [[0,0],[0,0]]
+    for date in all_games:
+        outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = pred_historic_model_old_outcomes_pipeline(
+            'deterministic', 
+            LEAGUE_TO_MODEL_LEAGUE[selected_league], 
+            season[-7:], 
+            60, 
+            target_team_ids=all_ids[date], 
+            target_game_date=date)
+        
+        sum_cm[0][0] += int(cms[0][0])
+        sum_cm[0][1] += int(cms[0][1])
+        sum_cm[1][0] += int(cms[1][0])
+        sum_cm[1][1] += int(cms[1][1])
+        
+        for ids, result, in zip(all_ids[date][::2], all_games[date]):
+            winner = outcomes_preds[f'{date}:{ids}'][0]
+            prediction = outcomes_preds[f'{date}:{ids}'][1]
+            result['winner'] = 'Home' if winner else 'Away'
+            result['prediction'] = 'Home' if prediction else 'Away'
+
+
+    
+        
+    
+
+    return jsonify({'games': all_games,
+                    'confusion_matrix': sum_cm,
+                    'season': season[-7:],})
+                  #  'stats': {'final_acc': round(accs*100, 1), 'final_recall': round(recalls*100, 2), 'final_precision': round(precisions*100, 2), 'final_f1': round(f1s, 2)}
+                  #  })
+
+
 
 
 if __name__ == '__main__':

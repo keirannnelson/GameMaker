@@ -6,7 +6,7 @@
 
 
   <!-- Input section -->
-<div style="display: flex; flex-direction: column; gap: 1em;">
+<div style="display: flex; flex-direction: column; gap: 1em; justify-items: center;">
     <label for="start-date" style="font-weight: 600;">Start Date</label>
     <input 
       type="date" 
@@ -22,8 +22,21 @@
       style="padding: 10px; font-size: 1em; border: 1px solid #ccc; border-radius: 4px;"
       required
     >
-
-<button type="button" onclick="retrieveGamesRange()" style="
+<label for="league-select" style="font-weight: 600;align-content: center;">SELECT LEAGUE</label>
+    <select name="league-select" id="league-select" style="
+      padding: 10px 16px;
+      background-color: #ffffff;
+      color: rgb(0, 0, 0);
+      font-weight: 600;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+    ">
+      <option value="NBA">NBA</option>
+      <option value="NCAAMB_D1">NCAA Men's</option>
+    </select>
+    
+<button type="button" id="retrieve-button" onclick="retrieveGamesRange()" style="
   padding: 10px 16px;
   background-color: #1D428A;
   color: white;
@@ -35,7 +48,7 @@
   RETRIEVE
 </button>
 
-     <button type="button" onclick="predictGames()" style="
+<button type="button" id="predict-button" onclick="predictGames()" style="
   padding: 10px 16px;
   background-color: #1D428A;
   color: white;
@@ -46,6 +59,8 @@
 ">
   PREDICT
 </button>
+
+
 
 
 <!-- Game output goes here -->
@@ -88,7 +103,7 @@
     fetch('/get_games_range', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ selected_dates: date, selected_league: league })
+      body: JSON.stringify({ selected_dates: dates, selected_league: league })
     })
     .then(res => res.json())
     .then(data => {
