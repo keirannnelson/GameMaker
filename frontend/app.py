@@ -6,39 +6,6 @@ import firebase_admin
 from firebase_admin import credentials, auth 
 from backend.models.pipeline import pred_old_outcomes_pipeline
 
-NBA_TEAMS = (
-            'Atlanta Hawks',
-            'Boston Celtics',
-            'Brooklyn Nets',
-            'Charlotte Hornets',
-            'Chicago Bulls',
-            'Cleveland Cavaliers',
-            'Dallas Mavericks',
-            'Denver Nuggets',
-            'Detroit Pistons',
-            'Golden State Warriors',
-            'Houston Rockets',
-            'Indiana Pacers',
-            'LA Clippers',
-            'Los Angeles Lakers',
-            'Memphis Grizzlies',
-            'Miami Heat',
-            'Milwaukee Bucks',
-            'Minnesota Timberwolves',
-            'New Orleans Pelicans',
-            'New York Knicks',
-            'Oklahoma City Thunder',
-            'Orlando Magic',
-            'Philadelphia 76ers',
-            'Phoenix Suns',
-            'Portland Trail Blazers',
-            'Sacramento Kings',
-            'San Antonio Spurs',
-            'Toronto Raptors',
-            'Utah Jazz',
-            'Washington Wizards',
-        )
-
 DB_PATH = 'backend/database/game_stats.db'
 
 app = Flask(__name__)
@@ -55,9 +22,9 @@ seasons = c.fetchall()
 season_dates = {}
 
 for season in seasons:
-    c.execute(f"SELECT MAX(GAME_DATE) FROM '{season[0]}'")
-    date = c.fetchone()
-    season_dates[date[0]] = season[0]
+    c.execute(f"SELECT MAX(GAME_DATE), MIN(GAME_DATE) FROM '{season[0]}'")
+    end_date, start_date = c.fetchone()
+    season_dates[season] = [end_date, start_date]
 
 
 @app.route('/')
@@ -111,18 +78,11 @@ def logout():
 
 # Gets correct season
 def get_season(date, season_dates):
-    season = None
-    for end in season_dates:
-        print(end, date)
-        print(end < date)
-        if end < date:
-            return season
+    for season in season_dates:
+        if date <= season_dates[season][0] and date >= season_dates[season][1]:
+            return season[0]
         
-        print(season)
-        season = season_dates[end]
-        
-        
-    return season
+    return None
 
 # Count current W-L for each team
 def get_record(team_id, c, next_day_str, season):
@@ -144,7 +104,7 @@ def retrieve_results(season, next_day_str, league):
     c = conn.cursor()
 
     c.execute(f"""
-        SELECT GAME_ID, GAME_DATE, TEAM_ID, TEAM_NAME, WL, MATCHUP
+        SELECT GAME_ID, GAME_DATE, TEAM_ID, TEAM_NAME, WL, MATCHUP, TEAM_ABBREVIATION
         FROM '{season}'
         WHERE GAME_DATE = '{next_day_str}'
         AND LEAGUE = '{league}'
@@ -154,11 +114,14 @@ def retrieve_results(season, next_day_str, league):
 
     games = {}
     for row in rows:
-        game_id, game_date, team_id, name, wl, matchup = row
+        game_id, game_date, team_id, name, wl, matchup, abbrev = row
         if game_id not in games:
             games[game_id] = []
         
-        games[game_id].append({'team_id': team_id, 'name': name, 'wl': wl, 'home': 'vs.' in matchup})
+        if league == 'NCAAMB_D1':
+            games[game_id].append({'team_id': team_id, 'name': f'{name} ({abbrev})', 'wl': wl, 'home': 'vs.' in matchup})
+        else:
+            games[game_id].append({'team_id': team_id, 'name': name, 'wl': wl, 'home': 'vs.' in matchup})
 
     team_ids = []
     results = []
@@ -201,10 +164,9 @@ def get_games():
         next_day = selected_dt + timedelta(days=1)
         next_day_str = next_day.strftime("%Y-%m-%d")
         # Fix get season errors
-        #season = get_season(next_day_str, season_dates)
-        season = 'game_stats_2024-25'
+        season = get_season(next_day_str, season_dates)
         if not season:
-            return jsonify({'error': 'Season out of range'}), 400
+            return jsonify({'games': []})
 
         results, team_ids = retrieve_results(season, next_day_str, selected_league)
         
@@ -228,16 +190,16 @@ def get_predictions():
         next_day = selected_dt + timedelta(days=1)
         next_day_str = next_day.strftime("%Y-%m-%d")
 
-        # fix get season
-        #season = get_season(next_day_str, season_dates)
-        season = 'game_stats_2024-25'
+        season = get_season(next_day_str, season_dates)
         if not season:
-            return jsonify({'error': 'Season out of range'})
+            return jsonify({'games': []})
 
         results, team_ids = retrieve_results(season, next_day_str, selected_league)
-        print(team_ids)
-        outcomes_preds, final_acc, final_recall, final_precision, final_f1, final_cm = pred_old_outcomes_pipeline(season[-7:], team_ids, next_day_str)
+        if not results:
+            return jsonify({'games': results})
         
+        outcomes_preds, final_acc, final_recall, final_precision, final_f1, final_cm = pred_old_outcomes_pipeline(season[-7:], team_ids, next_day_str)
+        print(outcomes_preds)
         for ids, result, in zip(team_ids[::2], results):
             winner, prediction = outcomes_preds[int(ids)]
             result['winner'] = 'Home' if winner else 'Away'
@@ -262,7 +224,7 @@ def download_db():
 
 if __name__ == '__main__':
 
-    debug = False
+    debug = True
     if debug:
         app.run(debug=True)
     else:
