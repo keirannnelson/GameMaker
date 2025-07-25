@@ -1,17 +1,21 @@
 import pandas as pd
 import numpy as np
-from historic_model import get_X_and_y
+from historic_model import get_X_and_y, make_preds
 from get_game_stats_data import get_game_stats_data_df
 import matplotlib.pyplot as plt
-from monte_carlo_simulation import get_all_preds, display_all_reports
+from monte_carlo_simulation import (
+    get_all_preds, display_all_reports, get_sim_probs, CI95_percentage
+)
 import json
 from sklearn.metrics import (
     accuracy_score, recall_score, precision_score, f1_score, confusion_matrix
 )
+import os
+import joblib
 
 
 def pred_historic_model_old_outcomes_pipeline(
-    league, season_year, user_min_acc, target_team_ids=None,
+    version, league, season_year, user_min_acc, target_team_ids=None,
     target_game_date=None, training_and_testing=False
 ):
     df = get_game_stats_data_df(
@@ -22,51 +26,121 @@ def pred_historic_model_old_outcomes_pipeline(
         training_and_testing=training_and_testing,
     )
     X, y, home_ids, game_dates = get_X_and_y(df)
-    det_preds, det_probs, sim_probs, CIs = get_all_preds(
-        X, y, league, num_sims=1000
-    )
 
-    if det_preds is None:
-        return (None,) * 7
-
-    with open(
-            f"acc_thresholds/{league}_acc_per_thresholds_home.json", "r"
-    ) as f:
-        acc_per_thresholds_home = json.load(f)
-
-    min_threshold = acc_per_thresholds_home[str(user_min_acc)][1]
-    sim_preds = (np.array(sim_probs) > min_threshold).astype(int)
-
-    outcomes_preds = {
-        f"{game_date}:{home_id}": (true_label, det_pred, det_prob[0],
-                                   sim_pred, sim_prob, CI) for
-        home_id, game_date, true_label, det_pred, det_prob,
-        sim_pred, sim_prob, CI in zip(
-            home_ids, game_dates, y, det_preds, det_probs, sim_preds,
-            sim_probs, CIs
+    if version == "all":
+        det_preds, det_probs, sim_probs, CIs = get_all_preds(
+            X, y, league, num_sims=1000
         )
-    }
 
-    det_acc = accuracy_score(y, det_preds)
-    det_recall = recall_score(y, det_preds, zero_division=0)
-    det_precision = precision_score(y, det_preds, zero_division=0)
-    det_f1 = f1_score(y, det_preds, zero_division=0)
-    det_cm = confusion_matrix(y, det_preds, labels=[0, 1])
-    sim_acc = accuracy_score(y, sim_preds)
-    sim_recall = recall_score(y, sim_preds, zero_division=0)
-    sim_precision = precision_score(y, sim_preds, zero_division=0)
-    sim_f1 = f1_score(y, sim_preds, zero_division=0)
-    sim_cm = confusion_matrix(y, sim_preds, labels=[0, 1])
-    accs = (det_acc, sim_acc)
-    recalls = (det_recall, sim_recall)
-    precisions = (det_precision, sim_precision)
-    f1s = (det_f1, sim_f1)
-    cms = (det_cm, sim_cm)
-    extra_metrics = display_all_reports(y, det_preds, sim_preds)
+        if det_preds is None:
+            return (None,) * 7
 
-    return (
-        outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics
-    )
+        with open(
+                f"acc_thresholds/{league}_acc_per_thresholds_home.json", "r"
+        ) as f:
+            acc_per_thresholds_home = json.load(f)
+
+        min_threshold = acc_per_thresholds_home[str(user_min_acc)][1]
+        sim_preds = (np.array(sim_probs) > min_threshold).astype(int)
+
+        outcomes_preds = {
+            f"{game_date}:{home_id}": (true_label, det_pred, det_prob[0],
+                                       sim_pred, sim_prob, CI) for
+            home_id, game_date, true_label, det_pred, det_prob,
+            sim_pred, sim_prob, CI in zip(
+                home_ids, game_dates, y, det_preds, det_probs, sim_preds,
+                sim_probs, CIs
+            )
+        }
+
+        det_acc = accuracy_score(y, det_preds)
+        det_recall = recall_score(y, det_preds, zero_division=0)
+        det_precision = precision_score(y, det_preds, zero_division=0)
+        det_f1 = f1_score(y, det_preds, zero_division=0)
+        det_cm = confusion_matrix(y, det_preds, labels=[1, 0])
+        sim_acc = accuracy_score(y, sim_preds)
+        sim_recall = recall_score(y, sim_preds, zero_division=0)
+        sim_precision = precision_score(y, sim_preds, zero_division=0)
+        sim_f1 = f1_score(y, sim_preds, zero_division=0)
+        sim_cm = confusion_matrix(y, sim_preds, labels=[1, 0])
+        accs = (det_acc, sim_acc)
+        recalls = (det_recall, sim_recall)
+        precisions = (det_precision, sim_precision)
+        f1s = (det_f1, sim_f1)
+        cms = (det_cm, sim_cm)
+        extra_metrics = display_all_reports(y, det_preds, sim_preds)
+
+        return (
+            outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics
+        )
+    elif version == "deterministic":
+        det_preds, det_probs, acc, recall, precision, f1, cm = make_preds(
+            X, y, league,
+            verbose=False,
+            get_conf_matrix_img=False
+        )
+        outcomes_preds = {
+            f"{game_date}:{home_id}": (true_label, det_pred, det_prob) for
+            home_id, game_date, true_label, det_pred, det_prob,
+            in zip(
+                home_ids, game_dates, y, det_preds, det_probs
+            )
+        }
+        acc = accuracy_score(y, det_preds)
+        recall = recall_score(y, det_preds, zero_division=0)
+        precision = precision_score(y, det_preds, zero_division=0)
+        f1 = f1_score(y, det_preds, zero_division=0)
+        cm = confusion_matrix(y, det_preds, labels=[1, 0])
+
+        return (
+            outcomes_preds, acc, recall, precision, f1, cm, None
+        )
+    elif version == "simulation":
+        folder_path = f'{league}_model_fold_data'
+        fold_files = [f for f in os.listdir(folder_path) if
+                      os.path.isfile(os.path.join(folder_path, f))]
+        num_folds = len(fold_files)
+        folds = [
+            joblib.load(f'{folder_path}/ensemble_fold_{i}.pkl') for i in
+            range(num_folds)
+        ]
+        num_test_cases = X.shape[0]
+        sim_probs = [None] * num_test_cases
+        CIs = [None] * num_test_cases
+        num_sims = 1000
+        for i in range(num_test_cases):
+            sim_prob = get_sim_probs(
+                X, i, folds, num_sims=num_sims
+            )
+            sim_probs[i] = sim_prob
+            CIs[i] = CI95_percentage(sim_prob, num_sims)
+
+        with open(
+                f"acc_thresholds/{league}_acc_per_thresholds_home.json", "r"
+        ) as f:
+            acc_per_thresholds_home = json.load(f)
+
+        min_threshold = acc_per_thresholds_home[str(user_min_acc)][1]
+        sim_preds = (np.array(sim_probs) > min_threshold).astype(int)
+
+        outcomes_preds = {
+            f"{game_date}:{home_id}": (true_label, sim_pred, sim_prob,
+                                       sim_pred, sim_prob, CI) for
+            home_id, game_date, true_label, sim_pred, sim_prob, CI
+            in zip(
+                home_ids, game_dates, y, sim_preds, sim_probs, CIs
+            )
+        }
+
+        acc = accuracy_score(y, sim_preds)
+        recall = recall_score(y, sim_preds, zero_division=0)
+        precision = precision_score(y, sim_preds, zero_division=0)
+        f1 = f1_score(y, sim_preds, zero_division=0)
+        cm = confusion_matrix(y, sim_preds, labels=[1, 0])
+
+        return (
+            outcomes_preds, acc, recall, precision, f1, cm, None
+        )
 
 
 def trend_line_graph(plot_data, plot_type, season_year):
@@ -84,7 +158,7 @@ def trend_line_graph(plot_data, plot_type, season_year):
     plt.show()
 
 
-def eval_model_preds_over_time(league, season_year):
+def eval_model_preds_over_time(version, league, season_year):
     df = pd.read_sql_table(
         f"{league}_game_stats_{season_year}",
         f"sqlite:///../database/{league}_game_stats.db"
@@ -102,8 +176,10 @@ def eval_model_preds_over_time(league, season_year):
             print(f"Game date {game_date} is empty")
 
         (outcomes_preds, final_acc, final_recall, final_precision,
-         final_f1, final_cm) = pred_historic_model_old_outcomes_pipeline(
-            season_year, target_game_date=game_date, training_and_testing=True
+         final_f1, final_cm, extra_metrics) =\
+            pred_historic_model_old_outcomes_pipeline(
+            version, league, season_year, target_game_date=game_date,
+            training_and_testing=True
         )
 
         if outcomes_preds is None:
@@ -123,7 +199,7 @@ def eval_model_preds_over_time(league, season_year):
 
 if __name__ == '__main__':
     test_nba_pred_old_outcomes_pipeline = True
-    test_ncaa_pred_old_outcomes_pipeline = False
+    test_ncaa_pred_old_outcomes_pipeline = True
     do_eval_model_over_time = False
 
     def print_results(
@@ -132,30 +208,25 @@ if __name__ == '__main__':
         print("=" * 100)
         if outcomes_preds:
             print(outcomes_preds)
-            print(f"Det accuracy: {accs[0]:.4f}")
-            print(f"Det recall: {recalls[0]:.4f}")
-            print(f"Det precision: {precisions[0]:.4f}")
-            print(f"Det F1 Score: {f1s[0]:.4f}")
-            print("Det confusion matrix:")
-            print(cms[0])
-            print(f"Sim accuracy: {accs[1]:.4f}")
-            print(f"Sim recall: {recalls[1]:.4f}")
-            print(f"Sim precision: {precisions[1]:.4f}")
-            print(f"Sim F1 Score: {f1s[1]:.4f}")
-            print("Sim confusion matrix:")
-            print(cms[1])
+            print(f"Accuracy: {accs}")
+            print(f"Recall: {recalls}")
+            print(f"Precision: {precisions}")
+            print(f"F1 Score: {f1s}")
+            print("Confusion matrix:")
+            print(cms)
             print(extra_metrics)
         else:
             print("No predictions could be made")
         print("=" * 100)
 
     if test_nba_pred_old_outcomes_pipeline:
+        version = "all"
         league = "nba"
         season_year = "2024-25"
         user_min_acc = "60"
         outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = (
             pred_historic_model_old_outcomes_pipeline(
-                league, season_year, user_min_acc,
+                version, league, season_year, user_min_acc,
                 target_team_ids=[
                     1610612747, 1610612757, 1610612744, 1610612755,
                     1610612760, 1610612746, 1610612750, 1610612738,
@@ -170,12 +241,13 @@ if __name__ == '__main__':
         )
 
     if test_ncaa_pred_old_outcomes_pipeline:
+        version = "deterministic"
         league = "ncaa"
         season_year = "2024-25"
         user_min_acc = "80"
         outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = (
             pred_historic_model_old_outcomes_pipeline(
-                league, season_year, user_min_acc,
+                version, league, season_year, user_min_acc,
                 target_team_ids=[
                     "912f8837-1d81-4ef9-a576-a21f271d4c64",
                     "0113eea0-c943-4fff-9780-ae0fb099e7ef",
@@ -449,6 +521,7 @@ if __name__ == '__main__':
         )
 
     if do_eval_model_over_time:
+        version = "deterministic"
         league = "nba"
         season_year = "2024-25"
-        eval_model_preds_over_time(league, season_year)
+        eval_model_preds_over_time(version, league, season_year)
