@@ -250,6 +250,143 @@ def get_predictions():
 def download_db():
     return send_file(DB_PATH, as_attachment=True)
 
+@app.route('/get_teams')
+def get_teams():
+    league = request.args.get('league', 'NBA')
+    try:
+        conn = sqlite3.connect('/Users/alyssaking/Desktop/frontend/game_stats.db')
+        c = conn.cursor()
+        
+        c.execute("""
+            SELECT DISTINCT TEAM_NAME
+            FROM "game_stats_2024-25"
+            WHERE LEAGUE = ?
+            ORDER BY TEAM_NAME ASC
+        """, (league,))
+        
+        teams = [row[0] for row in c.fetchall()]
+        conn.close()
+        
+        return jsonify({"teams": teams})
+    except Exception as e:
+        print("Error fetching teams:", e)
+        return jsonify({"teams": [], "error": str(e)}), 500
+    
+
+TEAM_ABBREVIATION_MAP = {
+  "Atlanta Hawks": "ATL",
+  "Boston Celtics": "BOS",
+  "Brooklyn Nets": "BKN",
+  "Charlotte Hornets": "CHA",
+  "Chicago Bulls": "CHI",
+  "Cleveland Cavaliers": "CLE",
+  "Dallas Mavericks": "DAL",
+  "Denver Nuggets": "DEN",
+  "Detroit Pistons": "DET",
+  "Golden State Warriors": "GSW",
+  "Houston Rockets": "HOU",
+  "Indiana Pacers": "IND",
+  "LA Clippers": "LAC",
+  "Los Angeles Lakers": "LAL",
+  "Memphis Grizzlies": "MEM",
+  "Miami Heat": "MIA",
+  "Milwaukee Bucks": "MIL",
+  "Minnesota Timberwolves": "MIN",
+  "New Orleans Pelicans": "NOP",
+  "New York Knicks": "NYK",
+  "Oklahoma City Thunder": "OKC",
+  "Orlando Magic": "ORL",
+  "Philadelphia 76ers": "PHI",
+  "Phoenix Suns": "PHO",
+  "Portland Trail Blazers": "POR",
+  "Sacramento Kings": "SAC",
+  "San Antonio Spurs": "SAS",
+  "Toronto Raptors": "TOR",
+  "Utah Jazz": "UTA",
+  "Washington Wizards": "WAS",
+}
+
+def retrieve_results_matchups(season, next_day_str, team1, team2):
+    team1_abbr = TEAM_ABBREVIATION_MAP.get(team1)
+    team2_abbr = TEAM_ABBREVIATION_MAP.get(team2)
+
+    if not team1_abbr or not team2_abbr:
+        raise ValueError("Invalid team names provided")
+
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+
+    c.execute(f"""
+        SELECT GAME_ID, GAME_DATE, TEAM_ID, TEAM_NAME, WL, MATCHUP
+        FROM '{season}'
+        WHERE GAME_DATE = ?
+        AND LEAGUE = 'NBA'
+    """, (next_day_str,))
+    
+    rows = c.fetchall()
+
+    games = {}
+    for row in rows:
+        game_id, game_date, team_id, name, wl, matchup = row
+
+        # Only keep rows that match both abbreviations
+        if team1_abbr in matchup and team2_abbr in matchup:
+            if game_id not in games:
+                games[game_id] = []
+
+            games[game_id].append({
+                'team_id': team_id,
+                'name': name,
+                'wl': wl,
+                'home': 'vs.' in matchup
+            })
+
+    team_ids = []
+    results = []
+    for game_id, teams in games.items():
+        if len(teams) == 2:
+            home = teams[0] if teams[0]['home'] else teams[1]
+            away = teams[1] if teams[0]['home'] else teams[0]
+
+            team_ids += [home['team_id'], away['team_id']]
+
+            results.append({
+                'home': home['name'],
+                'away': away['name'],
+                'home_record': get_record(home['team_id'], c, next_day_str, season),
+                'away_record': get_record(away['team_id'], c, next_day_str, season),
+            })
+
+    conn.close()
+    return results, team_ids
+
+
+@app.route('/get_matchups', methods=['POST'])
+def get_matchups():
+    data = request.get_json()
+    selected_date = data.get('selected_date')  # format: 'YYYY-MM-DD'
+    team1 = data.get('team1')  # Full name
+    team2 = data.get('team2')  # Full name
+
+    if not (selected_date and team1 and team2):
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    try:
+        selected_dt = datetime.strptime(selected_date, "%Y-%m-%d")
+        next_day = selected_dt + timedelta(days=1)
+        next_day_str = next_day.strftime("%Y-%m-%d")
+
+        season = get_season(next_day_str, season_dates)
+        if not season:
+            return jsonify({'error': 'Season out of range'}), 400
+
+        results, team_ids = retrieve_results_matchups(season, next_day_str, team1, team2)
+        return jsonify({'games': results, 'season': season})
+
+    except Exception as e:
+        print("Error:", e)
+        return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
 
