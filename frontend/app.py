@@ -80,6 +80,69 @@ def login():
 @app.route('/signup')
 def signup():
     return render_template('signup.html')
+@app.route('/get_games_range', methods=['POST'])
+def get_games_range():
+    data = request.get_json()
+    selected_dates = data.get('selected_dates', [])
+
+    if not selected_dates:
+        return jsonify({'error': 'No dates provided'}), 400
+
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+
+    all_games = {}
+
+    for date_str in selected_dates:
+        # Use your existing get_season helper to find the season for this date
+        season = get_season(date_str, season_dates)
+        if not season:
+            all_games[date_str] = []
+            continue
+
+        c.execute(f"""
+            SELECT GAME_ID, GAME_DATE, TEAM_ID, TEAM_NAME, WL, MATCHUP
+            FROM '{season}'
+            WHERE GAME_DATE = ?
+            AND TEAM_NAME IN {NBA_TEAMS}
+            ORDER BY GAME_DATE ASC
+        """, (date_str,))
+        rows = c.fetchall()
+
+        games = {}
+        for row in rows:
+            game_id, game_date, team_id, name, wl, matchup = row
+            if game_id not in games:
+                games[game_id] = []
+
+            # Determine home team by checking 'vs.' in matchup
+            is_home = 'vs.' in matchup
+            games[game_id].append({'id': team_id, 'name': name, 'wl': wl, 'home': is_home})
+
+        # Format the games results as you do in /get_games
+        results = []
+        for game_id, teams in games.items():
+            if len(teams) == 2:
+                # Set home/away correctly
+                if teams[0]['home']:
+                    team1 = teams[0]
+                    team2 = teams[1]
+                else:
+                    team1 = teams[1]
+                    team2 = teams[0]
+
+                results.append({
+                    'team1': team1['name'],
+                    'team2': team2['name'],
+                    'team1_record': get_record(team1['id'], c, date_str, season),
+                    'team2_record': get_record(team2['id'], c, date_str, season),
+                })
+
+        all_games[date_str] = results
+
+    conn.close()
+    return jsonify({'games': all_games})
+
 
 @app.route('/how_to_use')
 def how_to_use():
