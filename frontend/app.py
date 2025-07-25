@@ -199,7 +199,7 @@ def get_predictions():
         if not results:
             return jsonify({'games': results})
         
-        outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = pred_historic_model_old_outcomes_pipeline(LEAGUE_TO_MODEL_LEAGUE[selected_league], season[-7:], 60, target_team_ids=team_ids, target_game_date=next_day_str)
+        outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = pred_historic_model_old_outcomes_pipeline('deterministic', LEAGUE_TO_MODEL_LEAGUE[selected_league], season[-7:], 60, target_team_ids=team_ids, target_game_date=next_day_str)
         
         for ids, result, in zip(team_ids[::2], results):
             winner = outcomes_preds[f'{next_day_str}:{ids}'][0]
@@ -208,10 +208,10 @@ def get_predictions():
             result['prediction'] = 'Home' if prediction else 'Away'
 
         return jsonify({'games': results, 
-                        'confusion_matrix': [[int(cms[0][0][0]), int(cms[0][0][1])], 
-                                             [int(cms[0][1][0]), int(cms[0][1][1])]],
+                        'confusion_matrix': [[int(cms[0][0]), int(cms[0][1])], 
+                                             [int(cms[1][0]), int(cms[1][1])]],
                         'season': season[-7:],
-                        'stats': {'final_acc': round(accs[0]*100, 1), 'final_recall': round(recalls[0]*100, 2), 'final_precision': round(precisions[0]*100, 2), 'final_f1': round(f1s[0], 2)}
+                        'stats': {'final_acc': round(accs*100, 1), 'final_recall': round(recalls*100, 2), 'final_precision': round(precisions*100, 2), 'final_f1': round(f1s, 2)}
                         })
     
     except Exception as e:
