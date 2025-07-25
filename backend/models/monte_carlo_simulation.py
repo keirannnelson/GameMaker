@@ -134,6 +134,7 @@ def display_all_reports(y_test, det_preds, sim_preds):
         info_dict["accuracy"] = acc
         class_labels = [key for key in report.keys() if key != 'accuracy']
         for class_label in class_labels:
+            info_dict[class_label] = {}
             print(secondary_sep * separator_char_width)
             print(
                 bullet_point +
@@ -146,9 +147,9 @@ def display_all_reports(y_test, det_preds, sim_preds):
             print(f"\tRecall:    {recall}")
             print(f"\tPrecision: {precision}")
             print(f"\tF1-score:  {f1}")
-            info_dict["recall"] = recall
-            info_dict["precision"] = precision
-            info_dict["f1"] = f1
+            info_dict[class_label]["recall"] = recall
+            info_dict[class_label]["precision"] = precision
+            info_dict[class_label]["f1"] = f1
         print(primary_sep * separator_char_width)
 
         return info_dict
@@ -168,7 +169,7 @@ def display_all_reports(y_test, det_preds, sim_preds):
     det_report = classification_report(
         y_test, det_preds, target_names=det_target_names, output_dict=True
     )
-    title = "deterministic-right-simulation-wrong"
+    title = "deterministic"
     info_dict[title] = display_report(
         det_report, title,
         display_extras=det_report_extras
@@ -186,7 +187,7 @@ def display_all_reports(y_test, det_preds, sim_preds):
     sim_report = classification_report(
         y_test, sim_preds, target_names=sim_target_names, output_dict=True
     )
-    title = "simulation-right-deterministic-wrong"
+    title = "simulation"
     info_dict[title] = display_report(
         sim_report, title, display_extras=sim_report_extras
     )
@@ -311,9 +312,9 @@ def get_acc_per_thresholds(for_home_team, sim_probs, y, verbose=True):
 
 
 if __name__ == "__main__":
-    league = "nba"
+    league = "ncaa"
     season_year = "2024-25"
-    user_min_acc = 60
+    user_min_acc = "60"
     df = get_game_stats_data_df(league, season_year, training_and_testing=True)
     X, y, *_ = get_X_and_y(df)
 
@@ -331,9 +332,6 @@ if __name__ == "__main__":
         det_preds, det_probs, sim_probs, CIs = get_all_preds(
             X, y, league, num_sims=1000
         )
-        print(np.array(det_preds).tolist())
-        print(np.array(det_probs).tolist())
-        print(np.array(sim_probs).tolist())
 
         with open(
                 f"preds_probs/{league}_det_preds_probs_sim_probs.txt", "w"
@@ -344,15 +342,15 @@ if __name__ == "__main__":
                 np.array(sim_probs).tolist()],
                 f)
 
-    use_cached_acc_thresholds = False
+    use_cached_acc_thresholds = True
     if use_cached_acc_thresholds:
         with open(
-                f"acc_thresholds/{league}_acc_per_thresholds_home.json", "w"
+                f"acc_thresholds/{league}_acc_per_thresholds_home.json", "r"
         ) as f:
             acc_per_thresholds_home = json.load(f)
 
         with open(
-                f"acc_thresholds/{league}_acc_per_thresholds_away.json", "w"
+                f"acc_thresholds/{league}_acc_per_thresholds_away.json", "r"
         ) as f:
             acc_per_thresholds_away = json.load(f)
     else:
@@ -363,7 +361,7 @@ if __name__ == "__main__":
         with open(
                 f"acc_thresholds/{league}_acc_per_thresholds_home.json", "w"
         ) as f:
-            json.dump(np.array(acc_per_thresholds_home).tolist(), f)
+            json.dump(acc_per_thresholds_home, f)
 
         acc_per_thresholds_away = get_acc_per_thresholds(
             False, sim_probs, y, verbose=False
