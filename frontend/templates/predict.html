@@ -1,4 +1,4 @@
-{% extends "layout.html" %}
+={% extends "layout.html" %}
 {% block title %}Prediction - Game Maker{% endblock %}
 
 {% block content %}
@@ -110,7 +110,7 @@
       const container = document.getElementById('games-table-container');
       if (!data.games || Object.keys(data.games).length === 0) {
         container.innerHTML = '<p>No games found for this date range.</p>';
-        retrieveButton.textContent = "Retrieve"
+        retrieveButton.textContent = "RETRIEVE"
         return;
       }
 
@@ -144,10 +144,10 @@
         tableHTML += '</tbody></table>';
         container.innerHTML += tableHTML;
       }
-      retrieveButton.textContent = 'Retrieve'
+      retrieveButton.textContent = 'RETRIEVE'
     })
     .catch(err => {
-      retrieveButton.textContent = 'Retrieve'
+      retrieveButton.textContent = 'RETRIEVE'
       console.error(err);
       alert('Failed to retrieve games.');
     });
@@ -195,7 +195,7 @@
       const container = document.getElementById('games-table-container');
       if (!data.games || Object.keys(data.games).length === 0) {
         container.innerHTML = '<p>No predictions available.</p>';
-        predButton.textContent = "Predict"
+        predButton.textContent = "PREDICT"
         return;
       }
 
@@ -218,25 +218,29 @@
         `;
 
         games.forEach(game => {
-          tableHTML += `
-            <tr style="background-color: #f9f9f9;">
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.home}</td>
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.home_record}</td>
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.away}</td>
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.away_record}</td>
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.prediction}</td>
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.winner}</td>
-            </tr>
-          `;
-        });
+  const predCorrect = game.prediction === game.winner;
+  const predClass = predCorrect ? 'bg-correct' : 'bg-incorrect';
+
+  tableHTML += `
+    <tr>
+      <td style="padding: 12px; border: 1px solid #ddd;">${game.home}</td>
+      <td style="padding: 12px; border: 1px solid #ddd;">${game.home_record}</td>
+      <td style="padding: 12px; border: 1px solid #ddd;">${game.away}</td>
+      <td style="padding: 12px; border: 1px solid #ddd;">${game.away_record}</td>
+      <td class="${predClass}" style="padding: 12px; border: 1px solid #ddd;">${game.prediction}</td>
+      <td class="${predClass}" style="padding: 12px; border: 1px solid #ddd;">${game.winner}</td>
+    </tr>
+  `;
+});
+
 
         tableHTML += '</tbody></table>';
         container.innerHTML += tableHTML;
-        predButton.textContent = "Predict"
+        predButton.textContent = "PREDICT"
       }
     })
     .catch(err => {
-      predButton.textContent = "Predict"
+      predButton.textContent = "PREDICT"
       console.error(err);
       alert('Failed to retrieve predictions.');
     });
@@ -244,4 +248,3 @@
 </script>
 
 {% endblock %}
-

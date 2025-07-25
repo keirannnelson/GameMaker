@@ -104,4 +104,10 @@
     background-position: center;
     transition: background-image 0.3s ease;
   }
-  
+  .bg-correct {
+  background-color: #44e86a; /* greenish */
+}
+
+.bg-incorrect {
+  background-color: #e24653; /* reddish */
+}
