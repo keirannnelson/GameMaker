@@ -43,7 +43,7 @@ def get_game_stats_data_df(
 ):
     df = pd.read_sql_table(
         f"{league}_game_stats_{season_year}",
-        f"sqlite:///../database/{league}_game_stats.db"
+        f"sqlite:///backend/database/{league}_game_stats.db"
     )
     if training_and_testing and league == "nba":
         season_prefix = f"2{season_year.split('-')[0]}"
@@ -60,7 +60,7 @@ def get_game_stats_data_df(
         df.drop(
             columns=["LEAGUE"], inplace=True, errors='ignore'
         )
-
+    
     features = [
         'MIN', 'FGM', 'FGA', 'FG_PCT', 'FG3M', 'FG3A', 'FG3_PCT', 'FTM',
         'FTA', 'FT_PCT', 'OREB', 'DREB', 'REB', 'AST', 'STL', 'BLK', 'TOV',

@@ -1,5 +1,5 @@
 import pandas as pd
-from get_game_stats_data import get_game_stats_data_df
+from .get_game_stats_data import get_game_stats_data_df
 from sklearn.ensemble import StackingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
@@ -15,7 +15,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import numpy as np
 import joblib
-from feature_engineering import get_dropped_features, correlation_matrix
+from .feature_engineering import get_dropped_features, correlation_matrix
 import matplotlib.pyplot as plt
 from sklearn.model_selection import TimeSeriesSplit
 from scipy import stats
@@ -37,7 +37,6 @@ def get_X_and_y(df):
 
 
 def plot_save_confusion_matrix(cm, title_prefix=None):
-    cm = np.rot90(cm, 2)
     disp = ConfusionMatrixDisplay(
         confusion_matrix=cm, display_labels=["Positive", "Negative"]
     )
@@ -211,7 +210,7 @@ def train_model(X, y, league, get_corr_matrix=False, save_conf_matrix=False):
 
         fold_data["best_threshold"] = best_thresh
         joblib.dump(
-            fold_data, f'{league}_model_fold_data/ensemble_fold_{i}.pkl'
+            fold_data, f'backend/models/{league}_model_fold_data/ensemble_fold_{i}.pkl'
         )
 
         probs = stacking_clf.predict_proba(X_test)[:, 1]
@@ -260,7 +259,7 @@ def make_preds(
     f1s = []
     cms = []
 
-    folder_path = f'{league}_model_fold_data'
+    folder_path = f'backend/models/{league}_model_fold_data'
     num_folds = len(
         [f for f in os.listdir(folder_path) if
          os.path.isfile(os.path.join(folder_path, f))]
