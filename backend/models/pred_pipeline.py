@@ -1,9 +1,9 @@
 import pandas as pd
 import numpy as np
-from historic_model import get_X_and_y
-from get_game_stats_data import get_game_stats_data_df
+from .historic_model import get_X_and_y
+from .get_game_stats_data import get_game_stats_data_df
 import matplotlib.pyplot as plt
-from monte_carlo_simulation import get_all_preds, display_all_reports
+from .monte_carlo_simulation import get_all_preds, display_all_reports
 import json
 from sklearn.metrics import (
     accuracy_score, recall_score, precision_score, f1_score, confusion_matrix
@@ -21,6 +21,7 @@ def pred_historic_model_old_outcomes_pipeline(
         target_game_date=target_game_date,
         training_and_testing=training_and_testing,
     )
+
     X, y, home_ids, game_dates = get_X_and_y(df)
     det_preds, det_probs, sim_probs, CIs = get_all_preds(
         X, y, league, num_sims=1000
@@ -28,12 +29,13 @@ def pred_historic_model_old_outcomes_pipeline(
 
     if det_preds is None:
         return (None,) * 7
-
+    print('hear1')
     with open(
-            f"acc_thresholds/{league}_acc_per_thresholds_home.json", "r"
+            f"backend/models/acc_thresholds/{league}_acc_per_thresholds_home.json", "r"
     ) as f:
         acc_per_thresholds_home = json.load(f)
 
+    print('here2')
     min_threshold = acc_per_thresholds_home[str(user_min_acc)][1]
     sim_preds = (np.array(sim_probs) > min_threshold).astype(int)
 
@@ -51,12 +53,12 @@ def pred_historic_model_old_outcomes_pipeline(
     det_recall = recall_score(y, det_preds, zero_division=0)
     det_precision = precision_score(y, det_preds, zero_division=0)
     det_f1 = f1_score(y, det_preds, zero_division=0)
-    det_cm = confusion_matrix(y, det_preds, labels=[0, 1])
+    det_cm = confusion_matrix(y, det_preds, labels=[1, 0])
     sim_acc = accuracy_score(y, sim_preds)
     sim_recall = recall_score(y, sim_preds, zero_division=0)
     sim_precision = precision_score(y, sim_preds, zero_division=0)
     sim_f1 = f1_score(y, sim_preds, zero_division=0)
-    sim_cm = confusion_matrix(y, sim_preds, labels=[0, 1])
+    sim_cm = confusion_matrix(y, sim_preds, labels=[1, 0])
     accs = (det_acc, sim_acc)
     recalls = (det_recall, sim_recall)
     precisions = (det_precision, sim_precision)

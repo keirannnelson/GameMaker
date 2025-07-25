@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 import joblib
 import os
-from historic_model import make_preds, get_X_and_y
+from .historic_model import make_preds, get_X_and_y
 from sklearn.metrics import classification_report
-from get_game_stats_data import get_game_stats_data_df
+from .get_game_stats_data import get_game_stats_data_df
 import json
 
 
@@ -86,7 +86,7 @@ def get_all_preds(X, y, league, num_sims=1000):
     sim_probs = [None] * num_test_cases
     CIs = [None] * num_test_cases
 
-    folder_path = f'{league}_model_fold_data'
+    folder_path = f'backend/models/{league}_model_fold_data'
     fold_files = [f for f in os.listdir(folder_path) if
                   os.path.isfile(os.path.join(folder_path, f))]
     num_folds = len(fold_files)
