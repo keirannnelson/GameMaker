@@ -36,6 +36,7 @@ Machine Learning Models:
 To setup the program, run the following commands: 
 ```bash
 git clone https://github.com/keirannnelson/GameMaker.git
+cd GameMaker
 pip install -r requirements.txt
 ```
 

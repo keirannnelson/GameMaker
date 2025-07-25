@@ -1,0 +1,446 @@
+{% extends "layout.html" %}
+{% block title %}Matchups - Game Maker{% endblock %}
+
+{% block content %}
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet" />
+
+<style>
+  #matchup-container {
+    font-family: 'Montserrat', sans-serif;
+    padding: 20px;
+    background-color: #f9f9f9;
+  }
+
+  .matchup-header-container {
+    text-align: left;
+    margin-bottom: 20px;
+  }
+
+  .matchup-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: bold;
+  }
+
+  .toggle-wrapper {
+    display: flex;
+    align-items: left;
+    justify-content: left;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  /* Toggle Labels */
+  .toggle-label {
+    font-size: 14px;
+    color: #1D428A;
+    font-weight: 600;
+  }
+
+  /* iOS Style Toggle */
+  .ios-toggle {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
+  }
+
+  .ios-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    background-color: #ccc;
+    border-radius: 34px;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transition: 0.4s;
+  }
+
+  .slider::before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.4s;
+  }
+
+  input:checked + .slider {
+    background-color: #4caf50;
+  }
+
+  input:checked + .slider::before {
+    transform: translateX(22px);
+  }
+
+  #matchup-container h1 {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+
+  .main-wrapper {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .all-teams-box {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    width: 400px;
+    max-height: 600px;
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  .all-teams-box h2 {
+    text-align: center;
+    margin-bottom: 15px;
+    color: #1D428A;
+  }
+
+  .team-list-column {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .team-card {
+    width: 350px;
+    padding: 10px;
+    margin-bottom: 8px;
+    background-color: #f5f5f5;
+    border-radius: 12px;
+    text-align: center;
+    font-weight: 600;
+    cursor: grab;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+  }
+
+  .right-panel {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .court-area {
+    width: 90%;
+    max-width: 800px;
+    height: 400px;
+    background-image: url('https://www.wallmonkeys.com/cdn/shop/products/49338347-LRG_530x.jpg?v=1578660927');
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    border-radius: 30px;
+    overflow: hidden;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 50px;
+  }
+
+  .drop-zone {
+    width: 35%;
+    height: 150px;
+    border: 2px dashed #1D428A;
+    border-radius: 12px;
+    background-color: rgba(255,255,255,0.8);
+    font-weight: bold;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+
+  #predict-btn {
+    padding: 12px 32px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: white;
+    background-color: #1D428A;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  #predict-btn:hover {
+    background-color: #163269;
+  }
+
+  #matchup-date {
+    padding: 10px 14px;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    min-width: 150px;
+    box-sizing: border-box;
+  }
+
+  #controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+</style>
+
+<div id="matchup-container">
+
+  <div class="matchup-header-container">
+    <h2 style="color: #1D428A;" class="matchup-title">Choose your matchup</h2>
+    
+    <div class="toggle-wrapper">
+      <span class="toggle-label">NBA</span>
+      
+      <label class="ios-toggle">
+        <input type="checkbox" id="league-toggle" />
+        <span class="slider"></span>
+      </label>
+      
+      <span class="toggle-label">NCAA</span>
+    </div>
+  </div>
+  
+  <div class="main-wrapper">
+    <div class="all-teams-box">
+      <h2>All Teams</h2>
+      <div class="team-list-column" id="team-list-column">
+        <!-- Teams will be dynamically loaded here -->
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="court-area">
+        <div class="drop-zone" id="team1-drop">Drop Team 1 Here</div>
+        <div class="drop-zone" id="team2-drop">Drop Team 2 Here</div>
+      </div>
+
+      <div id="controls">
+        <label for="date-select" style="font-weight: 600;">SELECT DATE</label>
+    <div style="display: flex; gap: 1em; margin-bottom: 1em; margin:auto ;">
+      <input 
+        type="date" 
+        name="game_date" 
+        id="date-select" 
+        required 
+        style="flex-grow: 1; padding: 10px; font-size: 1em; border: 1px solid #ccc; border-radius: 4px; max-width: 200px;"
+      >
+      <button type="button" onclick="retrieveMatchups()" style="
+        padding: 10px 16px;
+        background-color: #1D428A;
+        color: white;
+        font-weight: 600;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      ">RETRIEVE</button>
+      <button type="button" onclick="predictGames()"style="
+        padding: 10px 16px;
+        background-color: #1D428A;
+        color: white;
+        font-weight: 600;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      "
+      >PREDICT</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="games-table-container" style="margin-top: 40px;"></div>
+<div id="predictions-table-container"></div>
+<div id="stats-table-container"></div>
+</div>
+
+
+
+<script>
+  let draggedTeam;
+
+  // Fetch and load teams based on league
+  async function loadTeams(league) {
+    try {
+      const response = await fetch(`/get_teams?league=${league}`);
+      const data = await response.json();
+
+      const teamListColumn = document.getElementById('team-list-column');
+      teamListColumn.innerHTML = ''; // Clear existing teams
+
+      data.teams.forEach(team => {
+        const teamCard = document.createElement('div');
+        teamCard.className = 'team-card';
+        teamCard.draggable = true;
+        teamCard.innerText = team;
+
+        // Drag start event
+        teamCard.addEventListener('dragstart', (e) => {
+          draggedTeam = e.target.innerText;
+        });
+
+        teamListColumn.appendChild(teamCard);
+      });
+    } catch (error) {
+      console.error("Failed to load teams:", error);
+    }
+  }
+
+  // Initialize with NBA teams on page load
+  loadTeams('NBA');
+
+  // Toggle league change handler
+  document.getElementById('league-toggle').addEventListener('change', (e) => {
+    const league = e.target.checked ? 'NCAAMB_D1' : 'NBA';
+    loadTeams(league);
+  });
+
+  // Drop zones setup
+  document.querySelectorAll(".drop-zone").forEach(zone => {
+    zone.addEventListener("dragover", e => e.preventDefault());
+
+    zone.addEventListener("drop", e => {
+      e.preventDefault();
+      const otherZoneId = zone.id === "team1-drop" ? "team2-drop" : "team1-drop";
+      const otherZone = document.getElementById(otherZoneId);
+      const otherTeamName = otherZone.innerText;
+
+      if (otherTeamName === draggedTeam) {
+        alert("Cannot select the same team twice.");
+        return;
+      }
+
+      zone.innerText = draggedTeam;
+      zone.style.backgroundColor = "rgba(255,255,255,0.8)";
+    });
+  });
+
+  // Predict button handler
+  document.getElementById("predict-btn").addEventListener("click", () => {
+    const team1 = document.getElementById("team1-drop").innerText;
+    const team2 = document.getElementById("team2-drop").innerText;
+
+    if (team1.includes("Drop") || team2.includes("Drop")) {
+      alert("Please select two teams.");
+      return;
+    }
+    if (team1 === team2) {
+      alert("Please select two different teams.");
+      return;
+    }
+
+    alert(`Predicting matchup between ${team1} and ${team2}!`);
+  });
+
+
+  function retrieveMatchups() {
+    const date = document.getElementById("date-select").value;
+    const team1 = document.getElementById("team1-drop").innerText;
+    const team2 = document.getElementById("team2-drop").innerText;
+
+    if (team1.includes("Drop") || team2.includes("Drop")) {
+      alert("Please select two teams.");
+      return;
+    }
+    if (team1 === team2) {
+      alert("Please select two different teams.");
+      return;
+    }
+    if (!date) {
+      alert("Please select a date.");
+      return;
+    }
+
+    if (team1.includes("Drop") || team2.includes("Drop")) {
+      alert("Please select two teams.");
+      return;
+    }
+    if (team1 === team2) {
+      alert("Please select two different teams.");
+      return;
+    }
+
+    fetch('/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ selected_date: date })
+    })
+    .then(res => res.json())
+    .then(data => {
+      const container = document.getElementById("games-table-container");
+      if (data.games.length === 0) {
+        container.innerHTML = "<p>No games found.</p>";
+        return;
+      }
+
+      let tableHTML = `
+        <table style="
+          width: 100%;
+          border-collapse: collapse;
+          font-family: 'Montserrat', sans-serif;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        "
+          id="games-table"
+        >
+          <caption style="font-weight: 600; font-size= 1em"> Season ${data.season}: Upcoming Games as of ${date}</caption>
+          <thead>
+            <tr style="background-color: #1D428A; color: white;">
+              <th style="padding: 12px; border: 1px solid #ddd;">Home</th>
+              <th style="padding: 12px; border: 1px solid #ddd;">Home W–L</th>
+              <th style="padding: 12px; border: 1px solid #ddd;">Away</th>
+              
+              <th style="padding: 12px; border: 1px solid #ddd;">Away W–L</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      data.games.forEach(game => {
+        tableHTML += `
+          <tr style="background-color: #f9f9f9;">
+            <td style="padding: 12px; border: 1px solid #ddd;">${game.home}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${game.home_record}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${game.away}</td>
+            
+            <td style="padding: 12px; border: 1px solid #ddd;">${game.away_record}</td>
+          </tr>
+        `;
+      });
+
+      tableHTML += `</tbody></table>`;
+      container.innerHTML = tableHTML;
+
+      const confusionMatrix = document.getElementById('predictions-table-container')
+      confusionMatrix.innerHTML = ''
+      const statsTable = document.getElementById('stats-table-container')
+      statsTable.innerHTML = ''
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Failed to retrieve games.");
+    });
+  };
+</script>
+{% endblock %}

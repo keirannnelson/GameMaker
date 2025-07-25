@@ -92,11 +92,11 @@
       data.games.forEach(game => {
         tableHTML += `
           <tr style="background-color: #f9f9f9;">
-            <td style="padding: 12px; border: 1px solid #ddd;">${game.team1}</td>
-            <td style="padding: 12px; border: 1px solid #ddd;">${game.team1_record}</td>
-            <td style="padding: 12px; border: 1px solid #ddd;">${game.team2}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${game.home}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${game.home_record}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${game.away}</td>
             
-            <td style="padding: 12px; border: 1px solid #ddd;">${game.team2_record}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${game.away_record}</td>
           </tr>
         `;
       });
@@ -165,10 +165,10 @@
       data.games.forEach(game => {
         tableHTML += `
           <tr style="background-color: #f9f9f9;">
-            <td style="padding: 12px; border: 1px solid #ddd;">${game.team1}</td>
-            <td style="padding: 12px; border: 1px solid #ddd;">${game.team1_record}</td>
-            <td style="padding: 12px; border: 1px solid #ddd;">${game.team2}</td>
-            <td style="padding: 12px; border: 1px solid #ddd;">${game.team2_record}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${game.home}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${game.home_record}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${game.away}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${game.away_record}</td>
             <td style="padding: 12px; border: 1px solid #ddd;">${game.prediction}</td>
             <td style="padding: 12px; border: 1px solid #ddd;">${game.winner}</td>
           </tr>
