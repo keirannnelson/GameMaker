@@ -67,13 +67,11 @@
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
 
+    const diffDays = (endDate - startDate) / (1000 * 3600 * 24) + 1;
     if (endDate < startDate) {
       alert('End date cannot be before start date.');
       return;
     }
-
-    const diffDays = (endDate - startDate) / (1000 * 3600 * 24) + 1;
-
     if (diffDays > 5) {
       alert('Date range cannot be more than 5 days.');
       return;
@@ -100,18 +98,10 @@
       }
 
       container.innerHTML = '';
-
       for (const [date, games] of Object.entries(data.games)) {
         container.innerHTML += `<h3 style="margin-top: 20px; font-weight: 600;">Games on ${date}</h3>`;
-
         let tableHTML = `
-          <table style="
-            width: 100%;
-            border-collapse: collapse;
-            font-family: 'Montserrat', sans-serif;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-          ">
+          <table style="width: 100%; border-collapse: collapse; font-family: 'Montserrat', sans-serif; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
             <thead>
               <tr style="background-color: #1D428A; color: white;">
                 <th style="padding: 12px; border: 1px solid #ddd;">Home</th>
@@ -126,10 +116,10 @@
         games.forEach(game => {
           tableHTML += `
             <tr style="background-color: #f9f9f9;">
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.team1}</td>
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.team1_record}</td>
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.team2}</td>
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.team2_record}</td>
+              <td style="padding: 12px; border: 1px solid #ddd;">${game.home}</td>
+              <td style="padding: 12px; border: 1px solid #ddd;">${game.home_record}</td>
+              <td style="padding: 12px; border: 1px solid #ddd;">${game.away}</td>
+              <td style="padding: 12px; border: 1px solid #ddd;">${game.away_record}</td>
             </tr>
           `;
         });
@@ -142,9 +132,90 @@
       console.error(err);
       alert('Failed to retrieve games.');
     });
-    
   }
-  
+
+  function predictGames() {
+    const startDateStr = document.getElementById('start-date').value;
+    const endDateStr = document.getElementById('end-date').value;
+
+    if (!startDateStr || !endDateStr) {
+      alert('Please select both start and end dates.');
+      return;
+    }
+
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+
+    const diffDays = (endDate - startDate) / (1000 * 3600 * 24) + 1;
+    if (endDate < startDate) {
+      alert('End date cannot be before start date.');
+      return;
+    }
+    if (diffDays > 5) {
+      alert('Date range cannot be more than 5 days.');
+      return;
+    }
+
+    const dates = [];
+    for (let i = 0; i < diffDays; i++) {
+      const d = new Date(startDate);
+      d.setDate(startDate.getDate() + i);
+      dates.push(d.toISOString().slice(0, 10));
+    }
+
+    fetch('/get_predictions_range', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ selected_dates: dates })
+    })
+    .then(res => res.json())
+    .then(data => {
+      const container = document.getElementById('games-table-container');
+      if (!data.games || Object.keys(data.games).length === 0) {
+        container.innerHTML = '<p>No predictions available.</p>';
+        return;
+      }
+
+      container.innerHTML = '';
+      for (const [date, games] of Object.entries(data.games)) {
+        container.innerHTML += `<h3 style="margin-top: 20px; font-weight: 600;">Predictions for ${date}</h3>`;
+        let tableHTML = `
+          <table style="width: 100%; border-collapse: collapse; font-family: 'Montserrat', sans-serif; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
+            <thead>
+              <tr style="background-color: #1D428A; color: white;">
+                <th style="padding: 12px; border: 1px solid #ddd;">Home</th>
+                <th style="padding: 12px; border: 1px solid #ddd;">Home W–L</th>
+                <th style="padding: 12px; border: 1px solid #ddd;">Away</th>
+                <th style="padding: 12px; border: 1px solid #ddd;">Away W–L</th>
+                <th style="padding: 12px; border: 1px solid #ddd;">Prediction</th>
+                <th style="padding: 12px; border: 1px solid #ddd;">Winner</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        games.forEach(game => {
+          tableHTML += `
+            <tr style="background-color: #f9f9f9;">
+              <td style="padding: 12px; border: 1px solid #ddd;">${game.home}</td>
+              <td style="padding: 12px; border: 1px solid #ddd;">${game.home_record}</td>
+              <td style="padding: 12px; border: 1px solid #ddd;">${game.away}</td>
+              <td style="padding: 12px; border: 1px solid #ddd;">${game.away_record}</td>
+              <td style="padding: 12px; border: 1px solid #ddd;">${game.prediction}</td>
+              <td style="padding: 12px; border: 1px solid #ddd;">${game.winner}</td>
+            </tr>
+          `;
+        });
+
+        tableHTML += '</tbody></table>';
+        container.innerHTML += tableHTML;
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Failed to retrieve predictions.');
+    });
+  }
 </script>
 
 {% endblock %}
