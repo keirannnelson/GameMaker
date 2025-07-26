@@ -110,7 +110,6 @@ def get_games_range():
                     'away_record': get_record(team2['id'], c, date_str, season),
                 })
         
-        print(results)
         all_games[date_str] = results
 
     conn.close()
@@ -226,7 +225,6 @@ def get_games():
         return jsonify({'error': 'Date not provided'}), 400
     if not selected_league:
         return jsonify({'error': 'league not provided'}), 400
-    print(selected_date)
 
     try:
         selected_dt = datetime.strptime(selected_date, "%Y-%m-%d")
@@ -435,6 +433,8 @@ def get_predictions_range():
     data = request.get_json()
     selected_dates = data.get('selected_dates', [])
     selected_league = data.get('selected_league')
+    selected_model = data.get('selected_model')
+    print(selected_model)
 
     if not selected_dates:
         return jsonify({'error': 'No dates provided'}), 400
@@ -497,42 +497,48 @@ def get_predictions_range():
                     'away_record': get_record(away['id'], c, date_str, season),
                 })
         
-        print(results)
         all_ids[date_str] = team_ids
         all_games[date_str] = results
 
     conn.close()
     sum_cm = [[0,0],[0,0]]
     for date in all_games:
+        if not all_games[date]:
+            continue
+
         outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = pred_historic_model_old_outcomes_pipeline(
-            'deterministic', 
+            selected_model, 
             LEAGUE_TO_MODEL_LEAGUE[selected_league], 
             season[-7:], 
             60, 
             target_team_ids=all_ids[date], 
             target_game_date=date)
-        
+    
         sum_cm[0][0] += int(cms[0][0])
         sum_cm[0][1] += int(cms[0][1])
         sum_cm[1][0] += int(cms[1][0])
         sum_cm[1][1] += int(cms[1][1])
         
         for ids, result, in zip(all_ids[date][::2], all_games[date]):
-            winner = outcomes_preds[f'{date}:{ids}'][0]
-            prediction = outcomes_preds[f'{date}:{ids}'][1]
+            outcomes = outcomes_preds.get(f'{date}:{ids}', None)
+            if not outcomes:
+                winner = "Undefined"
+                prediction = "Undefined"
+                result["winner"] = "Undefined"
+                result['prediction'] = "Undefined"
+                continue
+
+            winner = outcomes[0]
+            prediction = outcomes[1]
             result['winner'] = 'Home' if winner else 'Away'
             result['prediction'] = 'Home' if prediction else 'Away'
 
 
-    
-        
-    
-
     return jsonify({'games': all_games,
                     'confusion_matrix': sum_cm,
-                    'season': season[-7:],})
-                  #  'stats': {'final_acc': round(accs*100, 1), 'final_recall': round(recalls*100, 2), 'final_precision': round(precisions*100, 2), 'final_f1': round(f1s, 2)}
-                  #  })
+                    'season': season[-7:],
+                    'stats': {'final_acc': 0, 'final_recall': 0, 'final_precision': 0, 'final_f1': 0} # Note needs to be filled with real values. Waiting for Gabriel in case of interface changes
+                    })
 
 
 

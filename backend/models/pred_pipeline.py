@@ -25,6 +25,7 @@ def pred_historic_model_old_outcomes_pipeline(
         target_game_date=target_game_date,
         training_and_testing=training_and_testing,
     )
+
     X, y, home_ids, game_dates = get_X_and_y(df)
 
     if version == "all":
@@ -95,7 +96,7 @@ def pred_historic_model_old_outcomes_pipeline(
             outcomes_preds, acc, recall, precision, f1, cm, None
         )
     elif version == "simulation":
-        folder_path = f'{league}_model_fold_data'
+        folder_path = f'backend/models/{league}_model_fold_data'
         fold_files = [f for f in os.listdir(folder_path) if
                       os.path.isfile(os.path.join(folder_path, f))]
         num_folds = len(fold_files)
@@ -115,7 +116,7 @@ def pred_historic_model_old_outcomes_pipeline(
             CIs[i] = CI95_percentage(sim_prob, num_sims)
 
         with open(
-                f"acc_thresholds/{league}_acc_per_thresholds_home.json", "r"
+                f"backend/models/acc_thresholds/{league}_acc_per_thresholds_home.json", "r"
         ) as f:
             acc_per_thresholds_home = json.load(f)
 
@@ -165,7 +166,6 @@ def eval_model_preds_over_time(version, league, season_year):
     df = df[df['SEASON_ID'] == f'2{season_year[:season_year.index("-")]}']
     df.sort_values('GAME_DATE', inplace=True)
     game_dates = df['GAME_DATE'].unique()
-
     accs = []
     recalls = []
     precision = []
