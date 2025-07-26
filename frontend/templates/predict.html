@@ -77,14 +77,16 @@
 
 
 <!-- Game output goes here -->
-<div style="display: flex; flex-direction: column; gap: 1em; justify-items: center;">
-  <div id="games-table-container" style="margin-top:30px; max-height: 400px; overflow-y: auto;"></div>
+<div style="display: flex; flex-direction: column; gap: .5em; justify-items: center; min-width: 60%;">
+  <h3 id="header-div" style="align-content: center; border-bottom: solid 1px; min-width: 60%">0 Games Shown</h3>
+  <div id="games-table-container" style="margin-top:30px; max-height: 400px; overflow-y: auto;">Select Games...</div>
   <div id="predictions-table-container" style="margin-top:30px; max-height: 400px; overflow-y: auto;"></div>
   <div id="stats-table-container" style="margin-top:30px; max-height: 400px; overflow-y: auto;"></div>
 </div>
 </div>
 
 <script>
+
   function retrieveGamesRange() {
     const startDateStr = document.getElementById('start-date').value;
     const endDateStr = document.getElementById('end-date').value;
@@ -93,6 +95,7 @@
     retrieveButton.textContent = 'Loading...'
 
     if (!startDateStr || !endDateStr) {
+      retrieveButton.textContent = 'Retrieve';
       alert('Please select both start and end dates.');
       return;
     }
@@ -102,10 +105,12 @@
 
     const diffDays = (endDate - startDate) / (1000 * 3600 * 24) + 1;
     if (endDate < startDate) {
+      retrieveButton.textContent = 'Retrieve';
       alert('End date cannot be before start date.');
       return;
     }
     if (diffDays > 5) {
+      retrieveButton.textContent = 'Retrieve';
       alert('Date range cannot be more than 5 days.');
       return;
     }
@@ -131,53 +136,80 @@
         return;
       }
 
+      
+      let total_games = 0;
+      
       container.innerHTML = '';
       for (const [date, games] of Object.entries(data.games)) {
-        container.innerHTML += `<h3 style="margin-top: 20px; font-weight: 600;">Games on ${date}</h3>`;
-        let tableHTML = `
-          <table style="width: 100%; border-collapse: collapse; font-family: 'Montserrat', sans-serif; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
-            <thead>
-              <tr style="background-color: #1D428A; color: white;">
-                <th style="padding: 12px; border: 1px solid #ddd;">Home</th>
-                <th style="padding: 12px; border: 1px solid #ddd;">Home W–L</th>
-                <th style="padding: 12px; border: 1px solid #ddd;">Away</th>
-                <th style="padding: 12px; border: 1px solid #ddd;">Away W–L</th>
-              </tr>
-            </thead>
-            <tbody>
+        const heading = document.createElement('h3');
+        heading.textContent = `Games on ${date}`;
+        heading.style.cssText = "margin-top: 20px; font-weight: 600; align-self: center;";
+        container.appendChild(heading);
+
+
+        const table = document.createElement('table');
+        table.id = `table-${date}`
+        table.style.cssText = "width: 100%; border-collapse: collapse; font-family: 'Montserrat', sans-serif; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px;";
+
+
+        const thead = document.createElement('thead');
+        thead.innerHTML = `
+          <tr style="background-color: #1D428A; color: white;">
+            <th style="padding: 12px; border: 1px solid #ddd;"><input type="checkbox" id="checkAll${date}"></th>
+            <th style="padding: 12px; border: 1px solid #ddd;">Home</th>
+            <th style="padding: 12px; border: 1px solid #ddd;">Home W–L</th>
+            <th style="padding: 12px; border: 1px solid #ddd;">Away</th>
+            <th style="padding: 12px; border: 1px solid #ddd;">Away W–L</th>
+          </tr>
         `;
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
 
         games.forEach(game => {
-          tableHTML += `
-            <tr style="background-color: #f9f9f9;">
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.home}</td>
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.home_record}</td>
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.away}</td>
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.away_record}</td>
-            </tr>
+          const row = document.createElement('tr');
+          row.id = game.id
+          row.style.backgroundColor = '#f9f9f9';
+          row.innerHTML = `
+            <td style="padding: 12px; border: 1px solid #ddd;"><input type="checkbox" class="row-checkbox${date}"></td>
+            <td id="${game.home_id}" style="padding: 12px; border: 1px solid #ddd;">${game.home}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${game.home_record}</td>
+            <td id="${game.away_id}" style="padding: 12px; border: 1px solid #ddd;">${game.away}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${game.away_record}</td>
           `;
+          tbody.appendChild(row);
+          total_games++;
         });
+        
 
-        tableHTML += '</tbody></table>';
-        container.innerHTML += tableHTML;
+        table.appendChild(tbody);
+        container.append(table);
+        
 
-        const confusionMatrix = document.getElementById("predictions-table-container")
-        confusionMatrix.innerHTML = ''
-
-        const statsTable = document.getElementById('stats-table-container')
-        statsTable.innerHTML = ''
+        document.getElementById(`checkAll${date}`).addEventListener('change', function () {
+          const checkboxes = document.querySelectorAll(`.row-checkbox${date}`);
+          checkboxes.forEach(cb => cb.checked = this.checked);
+        });
 
 
       }
-      retrieveButton.textContent = 'Retrieve'
+      retrieveButton.textContent = 'Retrieve';
+      const confusionMatrix = document.getElementById("predictions-table-container");
+      confusionMatrix.innerHTML = '';
+
+      const statsTable = document.getElementById('stats-table-container');
+      statsTable.innerHTML = '';
+
+      const headerDiv = document.getElementById("header-div");
+      headerDiv.textContent = `${total_games} Games Shown`;
+
     })
     .catch(err => {
-      retrieveButton.textContent = 'Retrieve'
+      retrieveButton.textContent = 'Retrieve';
       console.error(err);
       alert('Failed to retrieve games.');
     });
   }
-
 
 
   function predictGames() {
@@ -188,20 +220,19 @@
     const predButton = document.getElementById("predict-button");
     predButton.textContent = "Loading..."
 
-    if (!startDateStr || !endDateStr) {
-      alert('Please select both start and end dates.');
-      return;
-    }
-
+    // get date range from selected date
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
-
     const diffDays = (endDate - startDate) / (1000 * 3600 * 24) + 1;
+
     if (endDate < startDate) {
+      predButton.textContent = "PREDICT"
       alert('End date cannot be before start date.');
       return;
     }
+
     if (diffDays > 5) {
+      predButton.textContent = "PREDICT"
       alert('Date range cannot be more than 5 days.');
       return;
     }
@@ -213,61 +244,121 @@
       dates.push(d.toISOString().slice(0, 10));
     }
 
+    const selectedGames = {};
+    const rowData = {};
+    for (let i = 0; i < dates.length; i++) {
+      let table = document.getElementById(`table-${dates[i]}`);
+      let checkedBoxes = document.querySelectorAll(`.row-checkbox${dates[i]}:checked`);
+      if (checkedBoxes.length > 0) {
+        selectedGames[dates[i]] = []
+        rowData[dates[i]] = []
+      }
+
+      
+
+      checkedBoxes.forEach(box => {
+        const row = box.closest('tr');
+        const cells = row.querySelectorAll('td');
+
+        // Push the home and away team IDs
+        selectedGames[dates[i]].push(cells[1].id);
+        selectedGames[dates[i]].push(cells[3].id);
+        
+        rowData[dates[i]].push({
+          'home': row.cells[1].textContent,
+          'home_record': row.cells[2].textContent,
+          'away': row.cells[3].textContent,
+          'away_record': row.cells[4].textContent,
+          'home_id': row.cells[1].id,
+          'away_id': row.cells[3].id,
+        });
+      })
+    }
+    
+    if (Object.keys(selectedGames).length == 0) {
+      predButton.textContent = "PREDICT";
+      alert("No games selected");
+      return;
+    }
+    
+
     fetch('/get_predictions_range', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ selected_dates: dates, selected_league: league, selected_model: model })
+      body: JSON.stringify({ selected_games: selectedGames, selected_league: league, selected_model: model })
     })
     .then(res => res.json())
     .then(data => {
       const container = document.getElementById('games-table-container');
       if (!data.games || Object.keys(data.games).length === 0) {
         container.innerHTML = '<p>No predictions available.</p>';
-        predButton.textContent = "Predict"
+        predButton.textContent = "Predict";
         return;
       }
 
+      let total_games = 0;
       container.innerHTML = '';
       for (const [date, games] of Object.entries(data.games)) {
-        container.innerHTML += `<h3 style="margin-top: 20px; font-weight: 600;">Predictions for ${date}</h3>`;
-        let tableHTML = `
-          <table style="width: 100%; border-collapse: collapse; font-family: 'Montserrat', sans-serif; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
-            <thead>
-              <tr style="background-color: #1D428A; color: white;">
-                <th style="padding: 12px; border: 1px solid #ddd;">Home</th>
-                <th style="padding: 12px; border: 1px solid #ddd;">Home W–L</th>
-                <th style="padding: 12px; border: 1px solid #ddd;">Away</th>
-                <th style="padding: 12px; border: 1px solid #ddd;">Away W–L</th>
-                <th style="padding: 12px; border: 1px solid #ddd;">Prediction</th>
-                <th style="padding: 12px; border: 1px solid #ddd;">Winner</th>
-              </tr>
-            </thead>
-            <tbody>
+        const heading = document.createElement('h3');
+        heading.textContent = `Games on ${date}`;
+        heading.style.cssText = "margin-top: 20px; font-weight: 600; align-self: center;";
+        container.appendChild(heading);
+
+
+        const table = document.createElement('table');
+        table.style.cssText = "width: 100%; border-collapse: collapse; font-family: 'Montserrat', sans-serif; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px;";
+
+
+        const thead = document.createElement('thead');
+        thead.innerHTML = `
+          <tr style="background-color: #1D428A; color: white;">
+            <th style="padding: 12px; border: 1px solid #ddd;"><input type="checkbox" id="checkAll${date}"></th>
+            <th style="padding: 12px; border: 1px solid #ddd;">Home</th>
+            <th style="padding: 12px; border: 1px solid #ddd;">Home W–L</th>
+            <th style="padding: 12px; border: 1px solid #ddd;">Away</th>
+            <th style="padding: 12px; border: 1px solid #ddd;">Away W–L</th>
+            <th style="padding: 12px; border: 1px solid #ddd;">Prediction</th>
+            <th style="padding: 12px; border: 1px solid #ddd;">Winner</th>
+          </tr>
         `;
+        table.appendChild(thead);
 
-        games.forEach(game => {
-          tableHTML += `
-            <tr style="background-color: #f9f9f9;">
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.home}</td>
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.home_record}</td>
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.away}</td>
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.away_record}</td>
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.prediction}</td>
-              <td style="padding: 12px; border: 1px solid #ddd;">${game.winner}</td>
-            </tr>
+        const tbody = document.createElement('tbody');
+
+        for (let i = 0; i < games.length; i++) {
+          const row = document.createElement('tr');
+          row.style.backgroundColor = '#f9f9f9';
+          row.innerHTML = `
+            <td style="padding: 12px; border: 1px solid #ddd;"><input type="checkbox" class="row-checkbox${date}"></td>
+            <td id="${rowData[date][i].home_id}" style="padding: 12px; border: 1px solid #ddd;">${rowData[date][i].home}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${rowData[date][i].home_record}</td>
+            <td id="${rowData[date][i].away_id}" style="padding: 12px; border: 1px solid #ddd;">${rowData[date][i].away}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${rowData[date][i].away_record}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${games[i][0]}</td>
+            <td style="padding: 12px; border: 1px solid #ddd;">${games[i][1]}</td>
           `;
+          tbody.appendChild(row);
+          total_games++;
+        }
+        
+
+        table.appendChild(tbody);
+        container.append(table);
+
+        document.getElementById(`checkAll${date}`).addEventListener('change', function () {
+          const checkboxes = document.querySelectorAll(`.row-checkbox${date}`);
+          checkboxes.forEach(cb => cb.checked = this.checked);
         });
+      }
 
-        tableHTML += '</tbody></table>';
-        container.innerHTML += tableHTML;
-        predButton.textContent = "Predict"
-
-        const confusionMatrix = document.getElementById('predictions-table-container')
-
+      
+      const headerDiv = document.getElementById("header-div");
+      headerDiv.textContent = `${total_games} Games Shown`;
+      predButton.textContent = "Predict";
 
 
-      let cmHTML = `
-
+      const confusionMatrix = document.getElementById('predictions-table-container');
+      confusionMatrix.innerHTML = `
         <table style="
           width: 100%;
           border-collapse: collapse;
@@ -296,11 +387,10 @@
               <td style="padding: 12px; border: 1px solid #ddd; background-color: #f9f9f9;">${data.confusion_matrix[1][1]}</td>
             </tr>
           </tbody>
-      `
-      confusionMatrix.innerHTML = cmHTML
+      `;
       
-      const statsTable = document.getElementById('stats-table-container')
-      let statsHTML = `
+      const statsTable = document.getElementById('stats-table-container');
+      statsTable.innerHTML = `
         <table style="
           width: 100%;
           border-collapse: collapse;
@@ -328,10 +418,9 @@
             </tr>
           </tbody>
       `;
-      statsTable.innerHTML = statsHTML
       
 
-      }
+      
     })
     .catch(err => {
       predButton.textContent = "Predict"

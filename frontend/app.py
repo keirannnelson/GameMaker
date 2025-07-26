@@ -61,7 +61,7 @@ def get_games_range():
     c = conn.cursor()
 
     all_games = {}
-
+    print(selected_dates)
     for date_str in selected_dates:
         # Use your existing get_season helper to find the season for this date
         season = get_season(date_str, season_dates)
@@ -104,10 +104,13 @@ def get_games_range():
                     team2 = teams[0]
 
                 results.append({
+                    'id' : game_id,
                     'home': team1['name'],
                     'away': team2['name'],
                     'home_record': get_record(team1['id'], c, date_str, season),
                     'away_record': get_record(team2['id'], c, date_str, season),
+                    'home_id': team1['id'],
+                    'away_id': team2['id'],
                 })
         
         all_games[date_str] = results
@@ -450,87 +453,28 @@ def get_matchups():
 @app.route('/get_predictions_range', methods=['POST'])
 def get_predictions_range():
     data = request.get_json()
-    selected_dates = data.get('selected_dates', [])
+    selected_games = data.get('selected_games', [])
     selected_league = data.get('selected_league')
     selected_model = data.get('selected_model')
-    print(selected_model)
 
-    if not selected_dates:
-        return jsonify({'error': 'No dates provided'}), 400
+    if not selected_games:
+        return jsonify({'error': 'No games provided'}), 400
 
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-
-    all_games = {}
-    all_ids = {}
-    for date_str in selected_dates:
-        # Use your existing get_season helper to find the season for this date
-        season = get_season(date_str, season_dates)
-        if not season:
-            all_games[date_str] = []
-            continue
-
-        c.execute(f"""
-            SELECT GAME_ID, GAME_DATE, TEAM_ID, TEAM_NAME, WL, MATCHUP, TEAM_ABBREVIATION
-            FROM '{season}'
-            WHERE GAME_DATE = ?
-            AND LEAGUE = '{selected_league}'
-            ORDER BY GAME_DATE ASC
-        """, (date_str,))
-        rows = c.fetchall()
-
-        games = {}
-        for row in rows:
-            game_id, game_date, team_id, name, wl, matchup, abbrev = row
-            if game_id not in games:
-                games[game_id] = []
-
-            # Determine home team by checking 'vs.' in matchup
-            is_home = 'vs.' in matchup
-            if selected_league == 'NCAAMB_D1':
-                name = f'{name} ({abbrev})'
-            games[game_id].append({'id': team_id, 'name': name, 'wl': wl, 'home': is_home})
-
-        # Format the games results as you do in /get_games
-        results = []
-        team_ids = []
-        for game_id, teams in games.items():
-            if len(teams) == 2:
-                # Set home/away correctly
-                if teams[0]['home']:
-                    home = teams[0]
-                    away = teams[1]
-                else:
-                    home = teams[1]
-                    away = teams[0]
-                if selected_league == 'NBA':
-                    home['id'] = int(home['id'])
-                    away['id'] = int(away['id'])
-
-                team_ids += [home['id'], away['id']]
-                
-                results.append({
-                    'home': home['name'],
-                    'away': away['name'],
-                    'home_record': get_record(home['id'], c, date_str, season),
-                    'away_record': get_record(away['id'], c, date_str, season),
-                })
-        
-        all_ids[date_str] = team_ids
-        all_games[date_str] = results
-
-    conn.close()
     sum_cm = [[0,0],[0,0]]
-    for date in all_games:
-        if not all_games[date]:
-            continue
+    predictions = {}
+
+
+    for date in selected_games:
+        # if league is NBA cast id to int
+        if selected_league == 'NBA':
+            selected_games[date] = [int(team_id) for team_id in selected_games[date]] 
 
         outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = pred_historic_model_old_outcomes_pipeline(
             selected_model, 
             LEAGUE_TO_MODEL_LEAGUE[selected_league], 
-            season[-7:], 
+            '2024-25', 
             60, 
-            target_team_ids=all_ids[date], 
+            target_team_ids=selected_games[date], 
             target_game_date=date)
     
         sum_cm[0][0] += int(cms[0][0])
@@ -538,22 +482,19 @@ def get_predictions_range():
         sum_cm[1][0] += int(cms[1][0])
         sum_cm[1][1] += int(cms[1][1])
         
-        for ids, result, in zip(all_ids[date][::2], all_games[date]):
+        predictions[date] = []
+        
+        for ids in selected_games[date][::2]:
             outcomes = outcomes_preds.get(f'{date}:{ids}', None)
             if not outcomes:
-                winner = "Undefined"
-                prediction = "Undefined"
-                result["winner"] = "Undefined"
-                result['prediction'] = "Undefined"
+                predictions[date].append(['Undefined', 'Undefined'])
                 continue
 
-            winner = outcomes[0]
-            prediction = outcomes[1]
-            result['winner'] = 'Home' if winner else 'Away'
-            result['prediction'] = 'Home' if prediction else 'Away'
+            actual_winner = 'Home' if outcomes[0] else 'Away'
+            prediction = 'Home' if outcomes[1] else 'Away'
+            predictions[date].append([actual_winner, prediction])
 
-
-    return jsonify({'games': all_games,
+    return jsonify({'games': predictions,
                     'confusion_matrix': sum_cm,
                     'season': season[-7:],
                     'stats': {'final_acc': 0, 'final_recall': 0, 'final_precision': 0, 'final_f1': 0} # Note needs to be filled with real values. Waiting for Gabriel in case of interface changes
