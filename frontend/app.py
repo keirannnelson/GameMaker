@@ -348,42 +348,59 @@ TEAM_ABBREVIATION_MAP = {
 }
 
 def retrieve_results_matchups(season, next_day_str, team1, team2, league):
-    team1_abbr = TEAM_ABBREVIATION_MAP.get(team1)
-    team2_abbr = TEAM_ABBREVIATION_MAP.get(team2)
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    if league == 'NBA':
+        team1_abbr = TEAM_ABBREVIATION_MAP.get(team1)
+        team2_abbr = TEAM_ABBREVIATION_MAP.get(team2)
+    else:
+        c.execute(f"""SELECT TEAM_NAME, TEAM_ABBREVIATION FROM '{season}' GROUP BY TEAM_ABBREVIATION, TEAM_NAME HAVING LEAGUE != "NBA";""")
+        rows = c.fetchall()
+
+# Print table names
+        NCAA_map = {}
+        for row in rows:
+            NCAA_map[row[0]] = row[1]
+        team1_abbr = NCAA_map.get(team1)
+        team2_abbr = NCAA_map.get(team2)
 
     if not team1_abbr or not team2_abbr:
         raise ValueError("Invalid team names provided")
 
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
+    
 
     c.execute(f"""
         SELECT GAME_ID, GAME_DATE, TEAM_ID, TEAM_NAME, WL, MATCHUP
         FROM '{season}'
-        WHERE GAME_DATE = ?
+        WHERE GAME_DATE >= ?
         AND LEAGUE = '{league}'
     """, (next_day_str,))
     
     rows = c.fetchall()
 
     games = {}
+    
     for row in rows:
         game_id, game_date, team_id, name, wl, matchup = row
 
         # Only keep rows that match both abbreviations
+        
         if team1_abbr in matchup and team2_abbr in matchup:
+            
             if game_id not in games:
                 games[game_id] = []
             games[game_id].append({
                 'team_id': team_id,
                 'name': name,
                 'wl': wl,
-                'home': 'vs.' in matchup
+                'home': 'vs.' in matchup,
+                'game_date':game_date
             })
 
     team_ids = []
     results = []
     for game_id, teams in games.items():
+        
         if len(teams) == 2:
             home = teams[0] if teams[0]['home'] else teams[1]
             away = teams[1] if teams[0]['home'] else teams[0]
@@ -395,7 +412,9 @@ def retrieve_results_matchups(season, next_day_str, team1, team2, league):
                 'away': away['name'],
                 'home_record': get_record(home['team_id'], c, next_day_str, season),
                 'away_record': get_record(away['team_id'], c, next_day_str, season),
+                'game_date':teams[-1]['game_date']
             })
+            print(teams[-1])
 
     conn.close()
     return results, team_ids
