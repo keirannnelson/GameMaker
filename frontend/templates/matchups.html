@@ -469,8 +469,9 @@
     const cells = row.querySelectorAll('td');
     if (cells.length < 5) return;
 
-    selectedGames[date].push(cells[1].id);
-    selectedGames[date].push(cells[3].id);
+    selectedGames[date].push(parseInt(cells[1].id.replace(/\D/g, '')));
+    selectedGames[date].push(parseInt(cells[3].id.replace(/\D/g, '')));
+
 
     tableData[date].push({
       home: cells[1].textContent.trim(),
@@ -479,7 +480,7 @@
       away_record: cells[4].textContent.trim(),
       home_id: cells[1].id,
       away_id: cells[3].id,
-      id: row.id || null
+      id: row.id ? parseInt(row.id.replace(/\D/g, '')) : null
     });
   });
 
