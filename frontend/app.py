@@ -517,7 +517,7 @@ def test():
     selected_model = data.get('selected_model')
     print(selected_games)
     print(selected_league)
-    print(selected_model)
+
 
     if not selected_games:
         return jsonify({'error': 'No games provided'}), 400
@@ -534,14 +534,21 @@ def test():
         else:
             league_model = 'ncaa'
        
-        outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = pred_historic_model_old_outcomes_pipeline(
+        result = pred_historic_model_old_outcomes_pipeline(
             selected_model, 
             league_model,
             '2024-25', 
-            60, 
+            0, 
             target_team_ids=selected_games[date], 
-            target_game_date=date)
-    
+            target_game_date=date
+        )
+
+        if result is None or any(r is None for r in result):
+            print(f"No prediction results for date {date}")
+            continue  # or handle it however you'd like
+
+        outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = result
+
         sum_cm[0][0] += int(cms[0][0])
         sum_cm[0][1] += int(cms[0][1])
         sum_cm[1][0] += int(cms[1][0])
