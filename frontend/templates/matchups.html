@@ -246,6 +246,21 @@
         required 
         style="flex-grow: 1; padding: 10px; font-size: 1em; border: 1px solid #ccc; border-radius: 4px; max-width: 200px;"
       >
+      <label for="model-select" style="font-weight: 600;align-content: center;">Select Prediction Method</label>
+    <select name="model-select" id="model-select" style="
+      width: 180px;
+      padding: 10px 16px;
+      background-color: #ffffff;
+      color: rgb(0, 0, 0);
+      font-weight: 600;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+    ">
+      <option value="deterministic">No simulation</option>
+      <option value="simulation">Simulation</option>
+    </select>
+    
       <button type="button" onclick="retrieveMatchups()" style="
         padding: 10px 16px;
         background-color: #1D428A;
@@ -255,7 +270,7 @@
         border-radius: 4px;
         cursor: pointer;
       ">RETRIEVE</button>
-      <button type="button" onclick="predictGames()"style="
+      <button type="button" id="predict-button" onclick="predictGames()"style="
         padding: 10px 16px;
         background-color: #1D428A;
         color: white;
@@ -336,21 +351,7 @@
   });
 
   // Predict button handler
-  document.getElementById("predict-btn").addEventListener("click", () => {
-    const team1 = document.getElementById("team1-drop").innerText;
-    const team2 = document.getElementById("team2-drop").innerText;
-
-    if (team1.includes("Drop") || team2.includes("Drop")) {
-      alert("Please select two teams.");
-      return;
-    }
-    if (team1 === team2) {
-      alert("Please select two different teams.");
-      return;
-    }
-
-    alert(`Predicting matchup between ${team1} and ${team2}!`);
-  });
+  
 
 
   function retrieveMatchups() {
@@ -405,6 +406,7 @@
           margin-left: 50px;
         "
           id="games-table"
+          class="game-table"
         >
           <caption style="font-weight: 600; font-size= 1em"> Season ${data.season}: Upcoming Games as of ${date}</caption>
           <thead>
@@ -424,10 +426,10 @@
         tableHTML += `
           <tr style="background-color: #f9f9f9;">
             <td style="padding: 12px; border: 1px solid #ddd;">${new Date(game.game_date).toLocaleDateString()}</td>
-            <td style="padding: 12px; border: 1px solid #ddd;">${game.home}</td>
+            <td id="${game.home_id}" style="padding: 12px; border: 1px solid #ddd;">${game.home}</td>
             <td style="padding: 12px; border: 1px solid #ddd;">${game.home_record}</td>
-            <td style="padding: 12px; border: 1px solid #ddd;">${game.away}</td>
-            
+            <td id="${game.away_id}" style="padding: 12px; border: 1px solid #ddd;">${game.away}</td>
+          
             <td style="padding: 12px; border: 1px solid #ddd;">${game.away_record}</td>
           </tr>
         `;
@@ -446,5 +448,191 @@
       alert("Failed to retrieve games.");
     });
   };
+
+  function getGameTableInfo() {
+      const table = document.getElementById("games-table");
+  const tableData = {};
+  const selectedGames = {};
+
+  if (!table) {
+    console.warn("No table found.");
+    return [tableData, selectedGames];
+  }
+
+  const date = document.getElementById("date-select").value;
+  const rows = table.querySelectorAll('tbody tr');
+
+  tableData[date] = [];
+  selectedGames[date] = [];
+
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    if (cells.length < 5) return;
+
+    selectedGames[date].push(cells[1].id);
+    selectedGames[date].push(cells[3].id);
+
+    tableData[date].push({
+      home: cells[1].textContent.trim(),
+      home_record: cells[2].textContent.trim(),
+      away: cells[3].textContent.trim(),
+      away_record: cells[4].textContent.trim(),
+      home_id: cells[1].id,
+      away_id: cells[3].id,
+      id: row.id || null
+    });
+  });
+
+  return [tableData, selectedGames];
+
+}
+
+
+
+  function predictGames() {
+    const startDateStr = document.getElementById("date-select").value;
+  const league = document.getElementById('league-toggle').checked ? 'NCAAMB1' : 'NBA';
+  const model = document.getElementById("model-select").value;
+  const predButton = document.getElementById("predict-button");
+  const team1 = document.getElementById("team1-drop").innerText.trim();
+    const team2 = document.getElementById("team2-drop").innerText.trim();
+  predButton.textContent = "Loading...";
+
+if (!startDateStr) {
+  alert('Please select a start date.');
+  return;
+}
+
+const startDate = new Date(startDateStr);
+
+// Set end date based on league
+let endDateStr = league === 'NBA' ? '2025-06-22' : '2025-04-14';
+const endDate = new Date(endDateStr);
+
+if (endDate < startDate) {
+  alert(`For ${league}, the end of the season is ${endDateStr}. Please choose an earlier start date.`);
+  return;
+}
+
+// Generate date range
+const diffDays = (endDate - startDate) / (1000 * 3600 * 24) + 1;
+const dates = [];
+for (let i = 0; i < diffDays; i++) {
+  const d = new Date(startDate);
+  d.setDate(startDate.getDate() + i);
+  dates.push(d.toISOString().slice(0, 10));
+}
+
+
+let [tableData, selectedGames] = getGameTableInfo();
+    if (Object.keys(selectedGames).length == 0) {
+      predButton.textContent = "PREDICT";
+      alert("No games selected");
+      return;
+    }
+    
+
+    fetch('/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ selected_games: selectedGames, selected_league: league, selected_model: model })
+    })
+    .then(res => res.json())
+    .then(data => {
+      const container = document.getElementById('games-table-container');
+      if (!data.games || Object.keys(data.games).length === 0) {
+        container.innerHTML = '<p>No predictions available.</p>';
+        predButton.textContent = "PREDICT";
+        return;
+      }
+      
+      for (const [date, games] of Object.entries(data.games)) {
+        let i = 0;
+        games.forEach( game => {
+          tableData[date][i]['prediction'] = game[0];
+          tableData[date][i]['winner'] = game[1];
+          if (model == 'simulation') {
+            tableData[date][i]['confidence'] = game[2];
+          }
+          i++;
+        });
+      }
+
+      const renderData = {'games': tableData}
+      renderGameTable(renderData, model);
+
+      predButton.textContent = "PREDICT";
+      const confusionMatrix = document.getElementById('predictions-table-container');
+      confusionMatrix.innerHTML = `
+        <table style="
+          width: 100%;
+          border-collapse: collapse;
+          font-family: 'Montserrat', sans-serif;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        "
+          id="games-table"
+        >
+          <caption style="font-weight: 600; font-size= 1em"> Confusion Matrix </caption>
+          <thead>
+            <tr style="background-color: #1D428A; color: white;">
+              <td style="background-color: #f9f9f9;"></td>
+              <th style="padding: 12px; border: 1px solid #ddd;">Predicted Home Win</th>
+              <th style="padding: 12px; border: 1px solid #ddd;">Predicted Home Loss</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background-color: #1D428A;">
+              <th style="padding: 12px; border: 1px solid #ddd;  color: white;">Actual Home Win</th>
+              <td style="padding: 12px; border: 1px solid #ddd; background-color: #f9f9f9;">${data.confusion_matrix[0][0]}</td>
+              <td style="padding: 12px; border: 1px solid #ddd; background-color: #f9f9f9;">${data.confusion_matrix[0][1]}</td>
+            </tr>
+            <tr style="background-color: #1D428A;">
+              <th style="padding: 12px; border: 1px solid #ddd;  color: white;">Actual Home Loss</th>
+              <td style="padding: 12px; border: 1px solid #ddd; background-color: #f9f9f9;">${data.confusion_matrix[1][0]}</td>
+              <td style="padding: 12px; border: 1px solid #ddd; background-color: #f9f9f9;">${data.confusion_matrix[1][1]}</td>
+            </tr>
+          </tbody>
+      `;
+      
+      const statsTable = document.getElementById('stats-table-container');
+      statsTable.innerHTML = `
+        <table style="
+          width: 100%;
+          border-collapse: collapse;
+          font-family: 'Montserrat', sans-serif;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        "
+          id="games-table"
+        >
+          <caption style="font-weight: 600; font-size= 1em"> Prediction Stats </caption>
+          <thead>
+            <tr style="background-color: #1D428A; color: white;">
+              <th style="padding: 12px; border: 1px solid #ddd;">Accuracy %</th>
+              <th style="padding: 12px; border: 1px solid #ddd;">Recall %</th>
+              <th style="padding: 12px; border: 1px solid #ddd;">Precision %</th>
+              <th style="padding: 12px; border: 1px solid #ddd;">F1</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr style="background-color: #f9f9f9;">
+              <td style="padding: 12px; border: 1px solid #ddd;">${data.stats.final_acc}%</td>
+              <td style="padding: 12px; border: 1px solid #ddd;">${data.stats.final_recall}%</td>
+              <td style="padding: 12px; border: 1px solid #ddd;">${data.stats.final_precision}%</td>
+              <td style="padding: 12px; border: 1px solid #ddd;">${data.stats.final_f1}</td>
+            </tr>
+          </tbody>
+      `;
+      
+
+      
+    })
+    .catch(err => {
+      predButton.textContent = "PREDICT"
+      console.error(err);
+      alert('Failed to retrieve predictions.');
+    });
+  }
 </script>
+
 {% endblock %}
