@@ -61,7 +61,7 @@ def get_games_range():
     c = conn.cursor()
 
     all_games = {}
-    print(selected_dates)
+
     for date_str in selected_dates:
         # Use your existing get_season helper to find the season for this date
         season = get_season(date_str, season_dates)
@@ -492,7 +492,11 @@ def get_predictions_range():
 
             actual_winner = 'Home' if outcomes[0] else 'Away'
             prediction = 'Home' if outcomes[1] else 'Away'
-            predictions[date].append([prediction, actual_winner])
+            data = [prediction, actual_winner]
+            if selected_model == 'simulation':
+                data.append(outcomes[2])
+
+            predictions[date].append(data)
 
     return jsonify({'games': predictions,
                     'confusion_matrix': sum_cm,
