@@ -492,7 +492,7 @@ def get_predictions_range():
 
             actual_winner = 'Home' if outcomes[0] else 'Away'
             prediction = 'Home' if outcomes[1] else 'Away'
-            predictions[date].append([actual_winner, prediction])
+            predictions[date].append([prediction, actual_winner])
 
     return jsonify({'games': predictions,
                     'confusion_matrix': sum_cm,

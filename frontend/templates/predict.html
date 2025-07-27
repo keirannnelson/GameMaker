@@ -78,7 +78,7 @@
 
 <!-- Game output goes here -->
 <div style="display: flex; flex-direction: column; gap: .5em; justify-items: center; min-width: 60%;">
-  <h3 id="header-div" style="align-content: center; border-bottom: solid 1px; min-width: 60%">0 Games Shown</h3>
+  <h3 id="header-div" style="align-content: center; border-bottom: solid 1px; min-width: 60%; text-align: center;">0 Games Shown</h3>
   <div id="games-table-container" style="margin-top:30px; max-height: 400px; overflow-y: auto;">Select Games...</div>
   <div id="predictions-table-container" style="margin-top:30px; max-height: 400px; overflow-y: auto;"></div>
   <div id="stats-table-container" style="margin-top:30px; max-height: 400px; overflow-y: auto;"></div>
@@ -86,6 +86,35 @@
 </div>
 
 <script>
+
+  function updateSelectedCounter(checked) {
+    const headerDiv = document.getElementById('header-div');
+    const header = headerDiv.textContent.split('-');
+    const selected_games_string = header[1].trim().split(' ');
+    let current_games = Number(selected_games_string[0])
+    let games = checked ? ++current_games : --current_games;
+    
+    const model = document.getElementById('model-select').value;
+    
+    if (games == 0) {
+      let time = "N/A";
+      headerDiv.textContent = `${header[0]} - ${games} Games Selected - Est. Time ${time} Minute`;
+      return;
+    } else if (model == 'simulation') {
+      time = Math.round(games * 6 / 60);
+    } else {
+      time = 0;
+    }
+
+    if (time == 0) {
+      headerDiv.textContent = `${header[0]} - ${games} Games Selected - Est. Time <1 Minute`;
+    } else if (time < 2) {
+      headerDiv.textContent = `${header[0]} - ${games} Games Selected - Est. Time ${time} Minute`;
+    } else {
+      headerDiv.textContent = `${header[0]} - ${games} Games Selected - Est. Time ${time} Minutes`;
+    }
+
+  }
 
   function retrieveGamesRange() {
     const startDateStr = document.getElementById('start-date').value;
@@ -95,7 +124,7 @@
     retrieveButton.textContent = 'Loading...'
 
     if (!startDateStr || !endDateStr) {
-      retrieveButton.textContent = 'Retrieve';
+      retrieveButton.textContent = 'RETRIEVE';
       alert('Please select both start and end dates.');
       return;
     }
@@ -105,12 +134,12 @@
 
     const diffDays = (endDate - startDate) / (1000 * 3600 * 24) + 1;
     if (endDate < startDate) {
-      retrieveButton.textContent = 'Retrieve';
+      retrieveButton.textContent = 'RETRIEVE';
       alert('End date cannot be before start date.');
       return;
     }
     if (diffDays > 5) {
-      retrieveButton.textContent = 'Retrieve';
+      retrieveButton.textContent = 'RETRIEVE';
       alert('Date range cannot be more than 5 days.');
       return;
     }
@@ -132,7 +161,7 @@
       const container = document.getElementById('games-table-container');
       if (!data.games || Object.keys(data.games).length === 0) {
         container.innerHTML = '<p>No games found for this date range.</p>';
-        retrieveButton.textContent = "Retrieve"
+        retrieveButton.textContent = "RETRIEVE"
         return;
       }
 
@@ -143,7 +172,7 @@
       for (const [date, games] of Object.entries(data.games)) {
         const heading = document.createElement('h3');
         heading.textContent = `Games on ${date}`;
-        heading.style.cssText = "margin-top: 20px; font-weight: 600; align-self: center;";
+        heading.style.cssText = "margin-top: 20px; font-weight: 600; text-align: center;";
         container.appendChild(heading);
 
 
@@ -188,12 +217,22 @@
 
         document.getElementById(`checkAll${date}`).addEventListener('change', function () {
           const checkboxes = document.querySelectorAll(`.row-checkbox${date}`);
-          checkboxes.forEach(cb => cb.checked = this.checked);
+          checkboxes.forEach(cb => {
+            console.log(this.checked, cb.checked);
+            if (cb.checked != this.checked) {
+              cb.checked = this.checked;
+              cb.dispatchEvent(new Event('change'));
+            }            
+          });
+          
         });
 
+        document.querySelectorAll(`.row-checkbox${date}`).forEach(box => {
+          box.addEventListener('change', () => updateSelectedCounter(box.checked));
+        });
 
       }
-      retrieveButton.textContent = 'Retrieve';
+      retrieveButton.textContent = 'RETRIEVE';
       const confusionMatrix = document.getElementById("predictions-table-container");
       confusionMatrix.innerHTML = '';
 
@@ -201,11 +240,11 @@
       statsTable.innerHTML = '';
 
       const headerDiv = document.getElementById("header-div");
-      headerDiv.textContent = `${total_games} Games Shown`;
+      headerDiv.textContent = `${total_games} Games Shown - 0 Games Selected - Est. Time N/A`;
 
     })
     .catch(err => {
-      retrieveButton.textContent = 'Retrieve';
+      retrieveButton.textContent = 'RETRIEVE';
       console.error(err);
       alert('Failed to retrieve games.');
     });
@@ -292,7 +331,7 @@
       const container = document.getElementById('games-table-container');
       if (!data.games || Object.keys(data.games).length === 0) {
         container.innerHTML = '<p>No predictions available.</p>';
-        predButton.textContent = "Predict";
+        predButton.textContent = "PREDICT";
         return;
       }
 
@@ -301,7 +340,7 @@
       for (const [date, games] of Object.entries(data.games)) {
         const heading = document.createElement('h3');
         heading.textContent = `Games on ${date}`;
-        heading.style.cssText = "margin-top: 20px; font-weight: 600; align-self: center;";
+        heading.style.cssText = "margin-top: 20px; font-weight: 600; text-align: center;";
         container.appendChild(heading);
 
 
@@ -327,6 +366,7 @@
 
         for (let i = 0; i < games.length; i++) {
           const row = document.createElement('tr');
+          const background_color = games[i][0] === games[i][1]? '#00FF52' : '#fc0511';
           row.style.backgroundColor = '#f9f9f9';
           row.innerHTML = `
             <td style="padding: 12px; border: 1px solid #ddd;"><input type="checkbox" class="row-checkbox${date}"></td>
@@ -334,8 +374,8 @@
             <td style="padding: 12px; border: 1px solid #ddd;">${rowData[date][i].home_record}</td>
             <td id="${rowData[date][i].away_id}" style="padding: 12px; border: 1px solid #ddd;">${rowData[date][i].away}</td>
             <td style="padding: 12px; border: 1px solid #ddd;">${rowData[date][i].away_record}</td>
-            <td style="padding: 12px; border: 1px solid #ddd;">${games[i][0]}</td>
-            <td style="padding: 12px; border: 1px solid #ddd;">${games[i][1]}</td>
+            <td style="padding: 12px; border: 1px solid #ddd; background-color: ${background_color};">${games[i][0]}</td>
+            <td style="padding: 12px; border: 1px solid #ddd; background-color: ${background_color};">${games[i][1]}</td>
           `;
           tbody.appendChild(row);
           total_games++;
@@ -347,14 +387,25 @@
 
         document.getElementById(`checkAll${date}`).addEventListener('change', function () {
           const checkboxes = document.querySelectorAll(`.row-checkbox${date}`);
-          checkboxes.forEach(cb => cb.checked = this.checked);
+          checkboxes.forEach(cb => {
+            console.log(this.checked, cb.checked);
+            if (cb.checked != this.checked) {
+              cb.checked = this.checked;
+              cb.dispatchEvent(new Event('change'));
+            }            
+          });
+          
+        });
+
+        document.querySelectorAll(`.row-checkbox${date}`).forEach(box => {
+          box.addEventListener('change', () => updateSelectedCounter(box.checked));
         });
       }
 
       
       const headerDiv = document.getElementById("header-div");
-      headerDiv.textContent = `${total_games} Games Shown`;
-      predButton.textContent = "Predict";
+      headerDiv.textContent = `${total_games} Games Shown - 0 Games Selected - Est. Time N/A`;
+      predButton.textContent = "PREDICT";
 
 
       const confusionMatrix = document.getElementById('predictions-table-container');
@@ -423,7 +474,7 @@
       
     })
     .catch(err => {
-      predButton.textContent = "Predict"
+      predButton.textContent = "PREDICT"
       console.error(err);
       alert('Failed to retrieve predictions.');
     });
