@@ -513,7 +513,11 @@ def test():
     data = request.get_json()
     selected_games = data.get('selected_games', [])
     selected_league = data.get('selected_league')
+    print(selected_league)
     selected_model = data.get('selected_model')
+    print(selected_games)
+    print(selected_league)
+    print(selected_model)
 
     if not selected_games:
         return jsonify({'error': 'No games provided'}), 400
@@ -526,10 +530,13 @@ def test():
         # if league is NBA cast id to int
         if selected_league == 'NBA':
             selected_games[date] = [int(team_id) for team_id in selected_games[date]] 
-
+            league_model = 'nba'
+        else:
+            league_model = 'ncaa'
+       
         outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = pred_historic_model_old_outcomes_pipeline(
             selected_model, 
-            LEAGUE_TO_MODEL_LEAGUE[selected_league], 
+            league_model,
             '2024-25', 
             60, 
             target_team_ids=selected_games[date], 
@@ -561,6 +568,7 @@ def test():
                     'season': season[-7:],
                     'stats': {'final_acc': 0, 'final_recall': 0, 'final_precision': 0, 'final_f1': 0} # Note needs to be filled with real values. Waiting for Gabriel in case of interface changes
                     })
+
 
 
 if __name__ == '__main__':
