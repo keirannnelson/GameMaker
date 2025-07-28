@@ -450,7 +450,7 @@
   };
 
   function getGameTableInfo() {
-      const table = document.getElementById("games-table");
+  const table = document.getElementById("games-table");
   const tableData = {};
   const selectedGames = {};
 
@@ -459,21 +459,23 @@
     return [tableData, selectedGames];
   }
 
-  const date = document.getElementById("date-select").value;
   const rows = table.querySelectorAll('tbody tr');
-
-  tableData[date] = [];
-  selectedGames[date] = [];
 
   rows.forEach(row => {
     const cells = row.querySelectorAll('td');
     if (cells.length < 5) return;
 
-    selectedGames[date].push(parseInt(cells[1].id.replace(/\D/g, '')));
-    selectedGames[date].push(parseInt(cells[3].id.replace(/\D/g, '')));
+    const gameDate = new Date(cells[0].textContent.trim()).toISOString().slice(0, 10);
 
+    if (!selectedGames[gameDate]) selectedGames[gameDate] = [];
+    if (!tableData[gameDate]) tableData[gameDate] = [];
 
-    tableData[date].push({
+    const homeId = parseInt(cells[1].id.replace(/\D/g, ''));
+    const awayId = parseInt(cells[3].id.replace(/\D/g, ''));
+
+    selectedGames[gameDate].push(homeId, awayId);
+
+    tableData[gameDate].push({
       home: cells[1].textContent.trim(),
       home_record: cells[2].textContent.trim(),
       away: cells[3].textContent.trim(),
@@ -483,11 +485,9 @@
       id: row.id ? parseInt(row.id.replace(/\D/g, '')) : null
     });
   });
-
+  print(selectedGames)
   return [tableData, selectedGames];
-
 }
-
 
 
   function predictGames() {
