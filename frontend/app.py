@@ -556,9 +556,9 @@ def test():
             target_game_date=date
         )
 
-        if result is None or any(r is None for r in result):
-            print(f"No prediction results for date {date}")
-            continue  # or handle it however you'd like
+        #if result is None or any(r is None for r in result):
+        #    print(f"No prediction results for date {date}")
+        #    continue  # or handle it however you'd like
 
         outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = result
 
@@ -568,9 +568,9 @@ def test():
         sum_cm[1][1] += int(cms[1][1])
         
         predictions[date] = []
-        
         for ids in selected_games[date][::2]:
             outcomes = outcomes_preds.get(f'{date}:{ids}', None)
+            
             if not outcomes:
                 predictions[date].append(['Undefined', 'Undefined'])
                 continue
@@ -583,6 +583,8 @@ def test():
                 data.append(outcomes[2])
     
             predictions[date].append(data)
+
+            print(predictions)
 
     return jsonify({'games': predictions,
                     'confusion_matrix': sum_cm,

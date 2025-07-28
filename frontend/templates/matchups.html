@@ -292,6 +292,118 @@
 
 
 <script>
+  function renderGameTable(data, prediction='None') {
+    let total_games = 0;
+    const container = document.getElementById('games-table-container')
+    container.innerHTML = '';
+    for (const [date, games] of Object.entries(data.games)) {
+      const heading = document.createElement('h3');
+      heading.textContent = `Games on ${date}`;
+      heading.style.cssText = "margin-top: 20px; font-weight: 600; text-align: center;";
+      container.appendChild(heading);
+
+
+      const table = document.createElement('table');
+      table.id = `table-${date}`
+      table.className = 'game-table'
+      table.style.cssText = "width: 100%; border-collapse: collapse; font-family: 'Montserrat', sans-serif; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px;";
+
+
+      const thead = document.createElement('thead');
+      let newHTML = `
+        <tr style="background-color: #1D428A; color: white;">
+          <th style="padding: 12px; border: 1px solid #ddd;"><input type="checkbox" id="checkAll${date}"></th>
+          <th style="padding: 12px; border: 1px solid #ddd;">Home</th>
+          <th style="padding: 12px; border: 1px solid #ddd;">Home W–L</th>
+          <th style="padding: 12px; border: 1px solid #ddd;">Away</th>
+          <th style="padding: 12px; border: 1px solid #ddd;">Away W–L</th>
+      `;
+      if (prediction != 'None') {
+        newHTML += `
+            <th style="padding: 12px; border: 1px solid #ddd;">Prediction</th>
+            <th style="padding: 12px; border: 1px solid #ddd;">Winner</th>
+        `;
+      }
+      if (prediction == 'simulation') {
+        newHTML += `
+            <th style="padding: 12px; border: 1px solid #ddd;">Confidence %</th>
+            <th style="padding: 12px; border: 1px solid #ddd;">Confidence Interval</th>
+        `;
+      }
+
+      newHTML += `</tr>`;
+
+
+      thead.innerHTML = newHTML;
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+
+      games.forEach(game => {
+        const row = document.createElement('tr');
+        row.id = game.id
+        row.style.backgroundColor = '#f9f9f9';
+        row.setAttribute('draggable', true);
+
+        newHTML = `
+          <td style="padding: 12px; border: 1px solid #ddd;"><input type="checkbox" class="row-checkbox${date}"></td>
+          <td id="${game.home_id}" style="padding: 12px; border: 1px solid #ddd;">${game.home}</td>
+          <td style="padding: 12px; border: 1px solid #ddd;">${game.home_record}</td>
+          <td id="${game.away_id}" style="padding: 12px; border: 1px solid #ddd;">${game.away}</td>
+          <td style="padding: 12px; border: 1px solid #ddd;">${game.away_record}</td>
+        `;
+        if (prediction != "None") {
+          let background_color = game.prediction === game.winner? '#00FF52' : '#fc0511';
+          if (game.prediction == "Undefined") {
+            background_color = '#FFFF00';
+          }
+          newHTML += `
+            <td style="padding: 12px; border: 1px solid #ddd; background-color: ${background_color};">${game.prediction}</td>
+            <td style="padding: 12px; border: 1px solid #ddd; background-color: ${background_color};">${game.winner}</td>
+          `;
+        }
+        if (prediction == 'simulation') {
+          newHTML += `
+                      <td style="padding: 12px; border: 1px solid #ddd;">${game.confidence}</td>
+                      <td style="padding: 12px; border: 1px solid #ddd;">${game.confidence_interval[0]}% - ${game.confidence_interval[1]}%</td>
+          `;
+        }
+
+        row.innerHTML = newHTML;
+        tbody.appendChild(row);
+
+        row.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', row.id); // transfer the row ID
+          e.dataTransfer.effectAllowed = 'move';
+        });
+
+        total_games++;
+      });
+      
+
+      table.appendChild(tbody);
+      container.append(table);
+      
+
+      document.getElementById(`checkAll${date}`).addEventListener('change', function () {
+        const checkboxes = document.querySelectorAll(`.row-checkbox${date}`);
+        checkboxes.forEach(cb => {
+          console.log(this.checked, cb.checked);
+          if (cb.checked != this.checked) {
+            cb.checked = this.checked;
+            cb.dispatchEvent(new Event('change'));
+          }            
+        });
+        
+      });
+
+      document.querySelectorAll(`.row-checkbox${date}`).forEach(box => {
+        box.addEventListener('change', () => updateSelectedCounter(box.checked));
+      });
+
+    }
+  }
+
   let draggedTeam;
 
  
