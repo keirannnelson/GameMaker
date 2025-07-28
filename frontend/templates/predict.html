@@ -48,6 +48,18 @@
     <option value="deterministic">No simulation</option>
     <option value="simulation">Simulation</option>
   </select>
+
+  <h4 id="accuracy-value" style="text-align: center; align-content: center; display: none;">Accuracy Threshold: 60%</h4>
+  <input
+    type="range"
+    id="accuracy-slider"
+    min="60"
+    max="100"
+    step="10"
+    list="tickmarks"
+    value="60"
+    disabled>
+  
   <div style="display: flex; flex-direction: row; gap: 1em; border-bottom: solid 1px black; padding-bottom: 1em;">
     <button type="button" id="retrieve-button" onclick="retrieveGamesRange()" style="
       padding: 10px 16px;
@@ -407,11 +419,13 @@
       return;
     }
     
+    const accuracy = document.getElementById('accuracy-slider').value;
+    console.log(accuracy);
 
     fetch('/get_predictions_range', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ selected_games: selectedGames, selected_league: league, selected_model: model })
+      body: JSON.stringify({ selected_games: selectedGames, selected_league: league, selected_model: model, accuracy_threshold: accuracy })
     })
     .then(res => res.json())
     .then(data => {
@@ -635,10 +649,32 @@
 
       parlayTable.appendChild(row);
     }
+
+   
     
   });
 
-  
+  const modelSelect = document.getElementById('model-select');
+
+  modelSelect.addEventListener('change', (e) => {
+    const acc = document.getElementById('accuracy-value');
+    const slider = document.getElementById('accuracy-slider');
+
+    if (event.target.value == 'deterministic') {
+      slider.disabled = true;
+      acc.style.display = 'none';
+    } else {
+      slider.disabled = false;
+      acc.style.display = 'flex';
+    }
+  });
+
+  const slider = document.getElementById('accuracy-slider');
+
+  slider.addEventListener('input', () => {
+    const acc = document.getElementById('accuracy-value');
+    acc.textContent = `Accuracy Threshold: ${slider.value}%`;
+  });
 
 </script>
 

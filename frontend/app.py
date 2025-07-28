@@ -459,6 +459,8 @@ def get_predictions_range():
     selected_games = data.get('selected_games', [])
     selected_league = data.get('selected_league')
     selected_model = data.get('selected_model')
+    accuracy_threshold = data.get('accuracy_threshold')
+    print(accuracy_threshold)
 
     if not selected_games:
         return jsonify({'error': 'No games provided'}), 400
@@ -476,7 +478,7 @@ def get_predictions_range():
             selected_model, 
             LEAGUE_TO_MODEL_LEAGUE[selected_league], 
             '2024-25', 
-            60, 
+            int(accuracy_threshold), 
             target_team_ids=selected_games[date], 
             target_game_date=date)
     
@@ -490,7 +492,6 @@ def get_predictions_range():
         y_true = []
         for ids in selected_games[date][::2]:
             outcomes = outcomes_preds.get(f'{date}:{ids}', None)
-            print(outcomes)
             if not outcomes:
                 predictions[date].append(['Undefined', 'Undefined'])
                 continue
