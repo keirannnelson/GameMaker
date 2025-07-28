@@ -5,6 +5,7 @@ from flask import Flask, render_template, request, session, redirect, url_for, j
 import firebase_admin
 from firebase_admin import credentials, auth 
 from backend.models.pred_pipeline import pred_historic_model_old_outcomes_pipeline
+from sklearn.metrics import recall_score, precision_score, f1_score
 
 DB_PATH = 'backend/database/game_stats_full.db'
 LEAGUE_TO_MODEL_LEAGUE = {'NBA': 'nba', 'NCAAMB_D1': 'ncaa'}
@@ -485,25 +486,36 @@ def get_predictions_range():
         sum_cm[1][1] += int(cms[1][1])
         
         predictions[date] = []
-        
+        y_pred = []
+        y_true = []
         for ids in selected_games[date][::2]:
             outcomes = outcomes_preds.get(f'{date}:{ids}', None)
+            print(outcomes)
             if not outcomes:
                 predictions[date].append(['Undefined', 'Undefined'])
                 continue
+
+            y_true.append(outcomes[0])
+            y_pred.append(outcomes[1])
 
             actual_winner = 'Home' if outcomes[0] else 'Away'
             prediction = 'Home' if outcomes[1] else 'Away'
             data = [prediction, actual_winner]
             if selected_model == 'simulation':
                 data.append(outcomes[2])
+                data.append(outcomes[-1])
 
             predictions[date].append(data)
+
+        acc = round((sum_cm[0][0] + sum_cm[1][1]) / (sum_cm[0][0] + sum_cm[1][1] + sum_cm[0][1] + sum_cm[1][0]) * 100, 2)
+        recall = round(recall_score(y_true, y_pred) * 100, 2)
+        precision = round(precision_score(y_true, y_pred) * 100, 2)
+        f1 = round(f1_score(y_true, y_pred), 2)
 
     return jsonify({'games': predictions,
                     'confusion_matrix': sum_cm,
                     'season': season[-7:],
-                    'stats': {'final_acc': 0, 'final_recall': 0, 'final_precision': 0, 'final_f1': 0} # Note needs to be filled with real values. Waiting for Gabriel in case of interface changes
+                    'stats': {'final_acc': acc, 'final_recall': recall, 'final_precision': precision, 'final_f1': f1} # Note needs to be filled with real values. Waiting for Gabriel in case of interface changes
                     })
 
 
@@ -565,9 +577,10 @@ def test():
             actual_winner = 'Home' if outcomes[0] else 'Away'
             prediction = 'Home' if outcomes[1] else 'Away'
             data = [prediction, actual_winner]
+            
             if selected_model == 'simulation':
                 data.append(outcomes[2])
-
+    
             predictions[date].append(data)
 
     return jsonify({'games': predictions,
@@ -583,26 +596,35 @@ def get_parlay():
     selected_games = data.get('selected_games')
     selected_league = data.get('selected_league')
 
+
+    if selected_league == 'NBA':
+        selected_games = [int(i) for i in selected_games]
+
     outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = pred_historic_model_old_outcomes_pipeline(
         'simulation', 
         LEAGUE_TO_MODEL_LEAGUE[selected_league], 
         '2024-25', 
         60, 
         target_team_ids=selected_games, 
-        target_game_date=selected_date)
+        target_game_date=selected_date
+        )
     
     games = []
-    for ids, in selected_games[::2]:
+    prob = 1.0
+    for ids in selected_games[::2]:
         outcomes = outcomes_preds.get(f'{selected_date}:{ids}', None)
         if not outcomes:
             games.append(['Undefined'])
             continue
+        games.append('Home' if outcomes[2] > 50 else 'Away')
+        
 
-        games.append('Home' if outcomes[0] else 'Away')
-    
-    print(games)
+        if outcomes[2] > 50:
+            prob = prob * (outcomes[2] / 100)
+        else:
+            prob = prob * (1 - (outcomes[2] / 100))
 
-    return jsonify({'games': games, 'probability': .5})
+    return jsonify({'games': games, 'probability': round(prob*100, 2)})
 
 
 if __name__ == '__main__':

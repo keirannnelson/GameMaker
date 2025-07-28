@@ -79,6 +79,7 @@
   <div name="parlay" id="parlay-drop" style="min-height: 45px; height: auto; border: 1px solid #ccc; border-radius: 4px; align-content: center;">
     <p style="text-align: center; justify-content: center; display: flex;">Drop games here</p>
   </div>
+  <h4 id="parlay-prob" style="display: none; text-align: center; justify-content: center;"></h4>
   <div style="display: flex; flex-direction: row; gap: 1em; justify-items: center;">
     <button type="button" onclick="clearParlay()" style="
       padding: 10px 16px;
@@ -185,6 +186,7 @@
       if (prediction == 'simulation') {
         newHTML += `
             <th style="padding: 12px; border: 1px solid #ddd;">Confidence %</th>
+            <th style="padding: 12px; border: 1px solid #ddd;">Confidence Interval</th>
         `;
       }
 
@@ -210,14 +212,20 @@
           <td style="padding: 12px; border: 1px solid #ddd;">${game.away_record}</td>
         `;
         if (prediction != "None") {
-          const background_color = game.prediction === game.winner? '#00FF52' : '#fc0511';
+          let background_color = game.prediction === game.winner? '#00FF52' : '#fc0511';
+          if (game.prediction == "Undefined") {
+            background_color = '#FFFF00';
+          }
           newHTML += `
             <td style="padding: 12px; border: 1px solid #ddd; background-color: ${background_color};">${game.prediction}</td>
             <td style="padding: 12px; border: 1px solid #ddd; background-color: ${background_color};">${game.winner}</td>
           `;
         }
         if (prediction == 'simulation') {
-          newHTML += `<td style="padding: 12px; border: 1px solid #ddd;">${game.confidence}</td>`;
+          newHTML += `
+                      <td style="padding: 12px; border: 1px solid #ddd;">${game.confidence}</td>
+                      <td style="padding: 12px; border: 1px solid #ddd;">${game.confidence_interval[0]}% - ${game.confidence_interval[1]}%</td>
+          `;
         }
 
         row.innerHTML = newHTML;
@@ -421,6 +429,8 @@
           tableData[date][i]['winner'] = game[1];
           if (model == 'simulation') {
             tableData[date][i]['confidence'] = game[2];
+            tableData[date][i]['confidence_interval'] = game[3];
+            console.log(game[3]);
           }
           i++;
         });
@@ -506,7 +516,7 @@
     const parlayDiv = document.getElementById("parlay-drop");
     parlayDiv.style.alignContent = 'start';
     parlayDiv.innerHTML = `
-      <table name="parlay-table" id="parlay-table" data-date="${date}">
+      <table name="parlay-table" id="parlay-table" data-date="${date}" style="width: 100%;">
         <thead>
           <tr style="min-width: 550px;"> 
             <th style="padding: 12px; border: 1px solid #ddd; background-color: #1D428A; color: white;">Home</th>      
@@ -521,6 +531,8 @@
     const parlayDiv = document.getElementById('parlay-drop');
     parlayDiv.style.alignContent = 'center';
     parlayDiv.innerHTML = `<p style="text-align: center; justify-content: center; display: flex;">Drop games here</p>`;
+    const caption = document.getElementById('parlay-prob');
+    caption.style.display = 'none';
   }
 
   function simulateParlay() {
@@ -535,9 +547,9 @@
     const games = [];
 
     parlayRows.forEach(row => {
-      //games.push(row.cells[1].id, row.cells[3].id);
+      games.push(row.cells[0].dataset.teamId, row.cells[1].dataset.teamId);
     })
-
+    
     const league = document.getElementById('league-select').value;
     const button = document.getElementById('parlay-button');
     button.textContent = "Loading..."
@@ -549,14 +561,23 @@
     })
     .then(res => res.json())
     .then(data => {
-
+    
       for (let i = 1; i < parlayTable.rows.length; i++) {
-        if (data.games[i] == 'home') {
+        if (data.games[i-1] == "Undefined") { 
+          parlayTable.rows[i].cells[0].style.backgroundColor = '#FFFF00';
+          parlayTable.rows[i].cells[1].style.backgroundColor = '#FFFF00';
+        } else if (data.games[i-1] == "Home") {
           parlayTable.rows[i].cells[0].style.backgroundColor = '#00FF52';
         } else {
           parlayTable.rows[i].cells[1].style.backgroundColor = '#00FF52';
         }
       }
+
+      const caption = document.getElementById('parlay-prob');
+      caption.textContent = `Simulated Likelihood: ${data.probability}%`;
+      caption.style.display = 'flex';
+      
+
       button.textContent = "SIMULATE";
     })
     .catch(err => {
