@@ -372,12 +372,13 @@
       alert("Please select a date.");
       return;
     }
-
+    
     fetch('/get_matchups', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
+      
       body: JSON.stringify({
   selected_date: date,
   team1: team1,
@@ -454,6 +455,7 @@
   const tableData = {};
   const selectedGames = {};
 
+
   if (!table) {
     console.warn("No table found.");
     return [tableData, selectedGames];
@@ -465,7 +467,10 @@
     const cells = row.querySelectorAll('td');
     if (cells.length < 5) return;
 
-    const gameDate = new Date(cells[0].textContent.trim()).toISOString().slice(0, 10);
+    
+    const rawDate = new Date(cells[0].textContent.trim());
+    rawDate.setDate(rawDate.getDate()+1);
+    const gameDate = rawDate.toISOString().slice(0, 10);
 
     if (!selectedGames[gameDate]) selectedGames[gameDate] = [];
     if (!tableData[gameDate]) tableData[gameDate] = [];
@@ -485,7 +490,7 @@
       id: row.id ? parseInt(row.id.replace(/\D/g, '')) : null
     });
   });
-  print(selectedGames)
+  
   return [tableData, selectedGames];
 }
 
