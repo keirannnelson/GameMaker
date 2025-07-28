@@ -7,71 +7,105 @@
 
   <!-- Input section -->
 <div style="display: flex; flex-direction: column; gap: 1em; justify-items: center;">
-    <label for="start-date" style="font-weight: 600;">Start Date</label>
-    <input 
-      type="date" 
-      id="start-date"
-      style="padding: 10px; font-size: 1em; border: 1px solid #ccc; border-radius: 4px;"
-      required
-    >
+  <label for="start-date" style="font-weight: 600; text-align: center;">Start Date</label>
+  <input 
+    type="date" 
+    id="start-date"
+    style="padding: 10px; font-size: 1em; border: 1px solid #ccc; border-radius: 4px;"
+    required
+  >
 
-    <label for="end-date" style="font-weight: 600;">End Date (Maximum of 5 days)</label>
-    <input 
-      type="date" 
-      id="end-date"
-      style="padding: 10px; font-size: 1em; border: 1px solid #ccc; border-radius: 4px;"
-      required
-    >
-<label for="league-select" style="font-weight: 600;align-content: center;">Select League</label>
-    <select name="league-select" id="league-select" style="
+  <label for="end-date" style="font-weight: 600; text-align: center;">End Date (Maximum of 5 days)</label>
+  <input 
+    type="date" 
+    id="end-date"
+    style="padding: 10px; font-size: 1em; border: 1px solid #ccc; border-radius: 4px;"
+    required
+  >
+  <label for="league-select" style="font-weight: 600;align-content: center; text-align: center;">Select League</label>
+  <select name="league-select" id="league-select" style="
+    padding: 10px 16px;
+    background-color: #ffffff;
+    color: rgb(0, 0, 0);
+    font-weight: 600;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+  ">
+    <option value="NBA">NBA</option>
+    <option value="NCAAMB_D1">NCAA Men's</option>
+  </select>
+  <label for="model-select" style="font-weight: 600;align-content: center; text-align: center;">Select Prediction Method</label>
+  <select name="model-select" id="model-select" style="
+    padding: 10px 16px;
+    background-color: #ffffff;
+    color: rgb(0, 0, 0);
+    font-weight: 600;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+  ">
+    <option value="deterministic">No simulation</option>
+    <option value="simulation">Simulation</option>
+  </select>
+  <div style="display: flex; flex-direction: row; gap: 1em; border-bottom: solid 1px black; padding-bottom: 1em;">
+    <button type="button" id="retrieve-button" onclick="retrieveGamesRange()" style="
       padding: 10px 16px;
-      background-color: #ffffff;
-      color: rgb(0, 0, 0);
+      background-color: #1D428A;
+      color: white;
       font-weight: 600;
-      border: 1px solid #ccc;
+      border: none;
       border-radius: 4px;
       cursor: pointer;
+      width: 100%;
     ">
-      <option value="NBA">NBA</option>
-      <option value="NCAAMB_D1">NCAA Men's</option>
-    </select>
-<label for="model-select" style="font-weight: 600;align-content: center;">Select Prediction Method</label>
-    <select name="model-select" id="model-select" style="
+      RETRIEVE
+    </button>
+
+    <button type="button" id="predict-button" onclick="predictGames()" style="
       padding: 10px 16px;
-      background-color: #ffffff;
-      color: rgb(0, 0, 0);
+      background-color: #1D428A;
+      color: white;
       font-weight: 600;
-      border: 1px solid #ccc;
+      border: none;
       border-radius: 4px;
       cursor: pointer;
+      width: 100%;
     ">
-      <option value="deterministic">No simulation</option>
-      <option value="simulation">Simulation</option>
-    </select>
-    
-<button type="button" id="retrieve-button" onclick="retrieveGamesRange()" style="
-  padding: 10px 16px;
-  background-color: #1D428A;
-  color: white;
-  font-weight: 600;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-">
-  RETRIEVE
-</button>
+      PREDICT
+    </button>
+  </div>
+  <label for="parlay-drop" style="font-weight: 600 ;align-content: center; text-align: center;">Create Parlay (Maximum of 4 teams)</label>
+  <div name="parlay" id="parlay-drop" style="min-height: 45px; height: auto; border: 1px solid #ccc; border-radius: 4px; align-content: center;">
+    <p style="text-align: center; justify-content: center; display: flex;">Drop games here</p>
+  </div>
+  <div style="display: flex; flex-direction: row; gap: 1em; justify-items: center;">
+    <button type="button" onclick="clearParlay()" style="
+      padding: 10px 16px;
+      background-color: #1D428A;
+      color: white;
+      font-weight: 600;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+    ">
+      CLEAR
+    </button>
+    <button type="button" id="parlay-button" onclick="simulateParlay()" style="
+      padding: 10px 16px;
+      background-color: #1D428A;
+      color: white;
+      font-weight: 600;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+    ">
+      SIMULATE
+    </button>
+  </div>
 
-<button type="button" id="predict-button" onclick="predictGames()" style="
-  padding: 10px 16px;
-  background-color: #1D428A;
-  color: white;
-  font-weight: 600;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-">
-  PREDICT
-</button>
 </div>
 
 
@@ -79,7 +113,7 @@
 <!-- Game output goes here -->
 <div style="display: flex; flex-direction: column; gap: .5em; justify-items: center; min-width: 60%;">
   <h3 id="header-div" style="align-content: center; border-bottom: solid 1px; min-width: 60%; text-align: center;">0 Games Shown</h3>
-  <div id="games-table-container" style="margin-top:30px; height: 400px; overflow-y: auto; resize: vertical;">Select Games...</div>
+  <div id="games-table-container" style="margin-top:30px; height: 400px; overflow-y: auto; resize: vertical;"><p style="text-align: center;">Select Games...</p></div>
   <div id="predictions-table-container" style="margin-top:30px; max-height: 400px; overflow-y: auto;"></div>
   <div id="stats-table-container" style="margin-top:30px; max-height: 400px; overflow-y: auto;"></div>
 </div>
@@ -166,6 +200,8 @@
         const row = document.createElement('tr');
         row.id = game.id
         row.style.backgroundColor = '#f9f9f9';
+        row.setAttribute('draggable', true);
+
         newHTML = `
           <td style="padding: 12px; border: 1px solid #ddd;"><input type="checkbox" class="row-checkbox${date}"></td>
           <td id="${game.home_id}" style="padding: 12px; border: 1px solid #ddd;">${game.home}</td>
@@ -186,6 +222,12 @@
 
         row.innerHTML = newHTML;
         tbody.appendChild(row);
+
+        row.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', row.id); // transfer the row ID
+          e.dataTransfer.effectAllowed = 'move';
+        });
+
         total_games++;
       });
       
@@ -300,13 +342,15 @@
       }
 
       
-      renderGameTable(data)
+      renderGameTable(data);
       retrieveButton.textContent = 'RETRIEVE';
       const confusionMatrix = document.getElementById("predictions-table-container");
       confusionMatrix.innerHTML = '';
 
       const statsTable = document.getElementById('stats-table-container');
       statsTable.innerHTML = '';
+
+      clearParlay();
     })
     .catch(err => {
       retrieveButton.textContent = 'RETRIEVE';
@@ -457,6 +501,124 @@
       alert('Failed to retrieve predictions.');
     });
   }
+
+  function initializeParlayTable(date) {
+    const parlayDiv = document.getElementById("parlay-drop");
+    parlayDiv.style.alignContent = 'start';
+    parlayDiv.innerHTML = `
+      <table name="parlay-table" id="parlay-table" data-date="${date}">
+        <thead>
+          <tr style="min-width: 550px;"> 
+            <th style="padding: 12px; border: 1px solid #ddd; background-color: #1D428A; color: white;">Home</th>      
+            <th style="padding: 12px; border: 1px solid #ddd; background-color: #1D428A; color: white;">Away</th>
+          </tr>
+        <thead>
+      <table>
+    `;
+  }
+
+  function clearParlay() {
+    const parlayDiv = document.getElementById('parlay-drop');
+    parlayDiv.style.alignContent = 'center';
+    parlayDiv.innerHTML = `<p style="text-align: center; justify-content: center; display: flex;">Drop games here</p>`;
+  }
+
+  function simulateParlay() {
+    const parlayTable = document.getElementById('parlay-table');
+    if (parlayTable == null) {
+      alert("Please add games to simulate parlay");
+      return;
+    }
+
+    const date = parlayTable.dataset.date;
+    const parlayRows = document.querySelectorAll('.parlay-table-row');
+    const games = [];
+
+    parlayRows.forEach(row => {
+      //games.push(row.cells[1].id, row.cells[3].id);
+    })
+
+    const league = document.getElementById('league-select').value;
+    const button = document.getElementById('parlay-button');
+    button.textContent = "Loading..."
+
+    fetch('/get_parlay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ selected_date: date, selected_games: games, selected_league: league})
+    })
+    .then(res => res.json())
+    .then(data => {
+
+      for (let i = 1; i < parlayTable.rows.length; i++) {
+        if (data.games[i] == 'home') {
+          parlayTable.rows[i].cells[0].style.backgroundColor = '#00FF52';
+        } else {
+          parlayTable.rows[i].cells[1].style.backgroundColor = '#00FF52';
+        }
+      }
+      button.textContent = "SIMULATE";
+    })
+    .catch(err => {
+      button.textContent = "SIMULATE";
+      console.error(err);
+      alert('Failed to simulate parlay.');
+    });
+  }
+
+  const dropZone = document.getElementById('parlay-drop');
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault(); // Required to allow drop
+    e.dataTransfer.dropEffect = 'move';
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const rowId = e.dataTransfer.getData('text/plain');
+    const draggedRow = document.getElementById(rowId);
+    const date = draggedRow.parentElement.parentElement.id.replace("table-", "");
+    if (draggedRow) {
+      if (document.getElementById('parlay-table') == null) {
+        initializeParlayTable(date);
+      }
+
+      const parlayTable = document.getElementById('parlay-table');
+
+      if (parlayTable.dataset.date != date) {
+        alert("Cannot have games from different dates");
+        return
+      }
+
+      if (parlayTable.rows.length > 4) {
+        alert("Cannot have more than 4 games");
+        return
+      }
+
+      const tableRows = document.querySelectorAll('.parlay-table-row');
+      for (let i = 0; i < tableRows.length; i++) {
+        if (tableRows[i].dataset.gameId == draggedRow.id) {
+          alert("Cannot have duplicate games");
+          return
+        }
+      }
+
+      const row = document.createElement('tr');
+      row.className = 'parlay-table-row';
+      row.style.backgroundColor = '#f9f9f9';
+      row.dataset.gameId = draggedRow.id;
+      row.innerHTML = `
+          <td style="padding: 12px; border: 1px solid #ddd;" data-team-id="${draggedRow.cells[1].id}">${draggedRow.cells[1].textContent}</td>
+          <td style="padding: 12px; border: 1px solid #ddd;" data-team-id="${draggedRow.cells[3].id}">${draggedRow.cells[3].textContent}</td>
+        `;
+
+      parlayTable.appendChild(row);
+    }
+    
+  });
+
+  
+
 </script>
 
 {% endblock %}

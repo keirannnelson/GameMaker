@@ -569,6 +569,33 @@ def test():
                     'stats': {'final_acc': 0, 'final_recall': 0, 'final_precision': 0, 'final_f1': 0} # Note needs to be filled with real values. Waiting for Gabriel in case of interface changes
                     })
 
+@app.route('/get_parlay', methods=['POST'])
+def get_parlay():
+    data = request.get_json()
+    selected_date = data.get('selected_date')
+    selected_games = data.get('selected_games')
+    selected_league = data.get('selected_league')
+
+    outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = pred_historic_model_old_outcomes_pipeline(
+        'simulation', 
+        LEAGUE_TO_MODEL_LEAGUE[selected_league], 
+        '2024-25', 
+        60, 
+        target_team_ids=selected_games, 
+        target_game_date=selected_date)
+    
+    games = []
+    for ids, in selected_games[::2]:
+        outcomes = outcomes_preds.get(f'{selected_date}:{ids}', None)
+        if not outcomes:
+            games.append(['Undefined'])
+            continue
+
+        games.append('Home' if outcomes[0] else 'Away')
+    
+    print(games)
+
+    return jsonify({'games': games, 'probability': .5})
 
 
 if __name__ == '__main__':
