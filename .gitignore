@@ -1,5 +1,4 @@
 __*
 .*
 firebase_config.json
-backend/database/create_ncaa_team_stats.ipynb
-backend/json/ncaamb_season_2024-25.json
+frontend/firebase_config.json
