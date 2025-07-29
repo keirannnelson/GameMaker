@@ -84,10 +84,10 @@
     <li><strong>False Positives (FP)</strong>: The number of instances where the model incorrectly predicted the positive class (a "false alarm"). Example: Model predicts a win, but the game is actually a loss.</li>
     <li><strong>False Negative (FN)</strong>: The number of instances where the model incorrectly predicted the negative class (a "missed detection"). Example: Model predicts a loss, but the game is actually a win.</li>
     <li><strong>Confusion Matrix (binary outcome case)</strong>: A 2×2 table that summarizes the counts of TP, TN, FP, and FN. It provides a full breakdown of the model’s performance across all outcomes. A visual breakdown will be presented below.</li>
-    <li><strong>Accuracy</strong>: The proportion of total predictions that were correct. Used when classes are roughly balanced. \( Accuracy = \frac{TP + TN}{TP + TN + FP + FN} \)</li>
-    <li><strong>Recall</strong>: Measures how well the model identifies actual positives. Useful when missing positives is costly (e.g., predicting wins correctly). \( Recall = \frac{TP}{TP + FN} \)</li>
-    <li><strong>Precision</strong>: Measures how many of the predicted positives are actually correct. Useful when false positives are costly (e.g., betting on predicted wins). \( Precision = \frac{TP}{TP + FP} \)</li>
-    <li><strong>F1 Score</strong>: The harmonic mean of precision and recall. It balances both metrics into a single score. Best used when you need a trade-off between precision and recall. \( F1 = \frac{2*Recall*Precision}{Recall+Precision} \)</li>
+    <li><strong>Accuracy</strong>: The proportion of total predictions that were correct. Used when classes are roughly balanced. This metric is normalized to a range from 0 to 1, where a value of 1 indicates optimal performance. \( Accuracy = \frac{TP + TN}{TP + TN + FP + FN} \)</li>
+    <li><strong>Recall</strong>: Measures how well the model identifies actual positives. Useful when missing positives is costly (e.g., predicting wins correctly). This metric is normalized to a range from 0 to 1, where a value of 1 indicates optimal performance. \( Recall = \frac{TP}{TP + FN} \)</li>
+    <li><strong>Precision</strong>: Measures how many of the predicted positives are actually correct. Useful when false positives are costly (e.g., betting on predicted wins). This metric is normalized to a range from 0 to 1, where a value of 1 indicates optimal performance. \( Precision = \frac{TP}{TP + FP} \)</li>
+    <li><strong>F1 Score</strong>: The harmonic mean of precision and recall. It balances both metrics into a single score. Best used when you need a trade-off between precision and recall. This metric is normalized to a range from 0 to 1, where a value of 1 indicates optimal performance. \( F1 = \frac{2*Recall*Precision}{Recall+Precision} \)</li>
   </ul>
 
   <br>
