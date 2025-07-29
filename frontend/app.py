@@ -1,11 +1,20 @@
 import os
+import io
+import base64
 from datetime import datetime, timedelta
 import sqlite3
+
+import pandas as pd
 from flask import Flask, render_template, request, session, redirect, url_for, jsonify, send_file
 import firebase_admin
 from firebase_admin import credentials, auth 
 from backend.models.pred_pipeline import pred_historic_model_old_outcomes_pipeline
 from sklearn.metrics import recall_score, precision_score, f1_score
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+
+matplotlib.use('Agg')
 
 DB_PATH = 'backend/database/game_stats_full.db'
 LEAGUE_TO_MODEL_LEAGUE = {'NBA': 'nba', 'NCAAMB_D1': 'ncaa'}
@@ -72,7 +81,7 @@ def get_games_range():
 
         c.execute(f"""
             SELECT GAME_ID, GAME_DATE, TEAM_ID, TEAM_NAME, WL, MATCHUP, TEAM_ABBREVIATION
-            FROM '{season}'
+            FROM 'game_stats_2024-25'
             WHERE GAME_DATE = ?
             AND LEAGUE = '{selected_league}'
             ORDER BY GAME_DATE ASC
@@ -131,6 +140,10 @@ def glossary():
 @app.route('/predict')
 def predict():
     return render_template('predict.html')
+
+@app.route('/stats')
+def stats():
+    return render_template('stats.html')
 
 @app.route('/sessionLogin', methods=['POST'])
 def session_login():
@@ -628,6 +641,133 @@ def get_parlay():
             prob = prob * (1 - (outcomes[2] / 100))
 
     return jsonify({'games': games, 'probability': round(prob*100, 2)})
+
+
+@app.route('/get_db_table', methods=['POST'])
+def get_db_table():
+    data = request.get_json()
+    selected_table = data.get('selected_table')
+    league = 'NBA'
+    if selected_table == None:
+        return jsonify({'error': 'No table provided'}), 400
+    elif selected_table == 'teams':
+        df = pd.read_sql_table('game_stats_2024-25', f'sqlite:///{DB_PATH}')
+        df = df[df['LEAGUE'] == league]
+        df = df.drop(['SEASON_ID', 'GAME_ID', 'MATCHUP', 'TEAM_ABBREVIATION', 'LEAGUE', 'GAME_DATE'], axis=1)
+        df['WL'] = df['WL'].map({'W': 1, 'L':0})
+        team_ids = df["TEAM_ID"].unique()
+
+        teams_data = {}
+        for team in team_ids:
+            team_data = df[df['TEAM_ID'] == team]
+            name = team_data['TEAM_NAME'].unique()[0]
+            team_data = team_data.drop(['TEAM_NAME', 'TEAM_ID'], axis=1)
+            
+            teams_data[team] = [name] + team_data.mean().round(2).tolist()
+    
+        columns = ['TEAM', 'WL%', 'MIN', 'PTS', 'FGM', 'FGA', 'FG%', 'FG3M', 'FG3A', 'FG3%', 'FTM', 'FTA', 'FT%', 'OREB', 'DREB', 'REB', 'AST', 'STL', 'BLK', 'TOV', 'PF', '+/-']
+        return jsonify({'teams_data': teams_data, 'columns': columns})
+    
+
+    elif selected_table == 'players':
+        df = pd.read_sql_table('player_info', 'sqlite:///backend/database/player_info.db')
+        df = df[df['IS_ACTIVE'] == True]
+
+        conn = sqlite3.Connection('backend/database/player_career_stats.db')
+        c = conn.cursor()
+        players_data = {}
+        for player in df.itertuples(index=False):
+            c.execute(f"""
+                SELECT *
+                FROM '{player[0]}'
+                WHERE SEASON_ID = (SELECT MAX(SEASON_ID) FROM '{player[0]}');
+                      """)
+            row = c.fetchone()
+            
+            if not row:
+                continue
+            recent_season = list(row)[3:]
+            players_data[player[0]] = [f'{player[1]} {player[2]}'] + recent_season
+
+        conn.close()
+        columns = ['PLAYER', 'TEAM', 'AGE', 'GP', 'GS', 'MIN', 'FGM', 'FGA', 'FG%', 'FG3M', 'FG3A', 'FG3%', 'FTM', 'FTA', 'FT%', 'OREB', 'DREB', 'REB', 'AST', 'STL', 'BLK', 'TOV', 'PF','PTS']
+        
+
+
+
+        return jsonify({'teams_data': players_data, 'columns': columns})
+
+
+def plot_image(plot_data, y_label, team):
+    season_year = "2024-25"
+    x = np.arange(len(plot_data))
+    y = np.array(plot_data)
+
+    # Create plot
+    fig, ax = plt.subplots()
+    ax.scatter(x, y, label="Games")
+    
+    if len(x) >= 2:  # Prevent polyfit from failing
+        m, b = np.polyfit(x, y, 1)
+        ax.plot(x, m * x + b, color="red", label="Trend Line")
+
+    ax.set_title(f'{team} {y_label} Trend Over Time ({season_year} Season)')
+    ax.set_xlabel('Games Played')
+    ax.set_ylabel(y_label)
+    ax.legend()
+    ax.grid(True)
+
+    # Convert to image in-memory
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    encoded = base64.b64encode(buf.read()).decode('utf-8')
+    plt.close(fig)
+    return encoded
+
+@app.route("/get_plot", methods=['POST'])
+def get_plot():
+    data = request.get_json()
+    table = data.get('selected_table')
+    col = data.get('selected_column')
+    ids = data.get('row_ids')
+    league = 'NBA'
+
+    col_to_stat = {'WL%': 'WL', 'FG%': 'FG_PCT', 'FG3%': 'FG3_PCT', 'FT%': 'FT_PCT', '+/-': 'PLUS_MINUS'}
+    if col in col_to_stat:
+        stat = col_to_stat[col]
+    else:
+        stat = col
+
+
+    df = pd.read_sql_table('game_stats_2024-25', f'sqlite:///{DB_PATH}')
+    df = df[df['LEAGUE'] == league]
+
+    images = {}
+
+    for team_id in ids:
+        team_df = df[df['TEAM_ID'] == team_id]    
+        team_df = team_df.sort_values('GAME_DATE')
+        team_df['WL'] = team_df['WL'].map({'W': 1, 'L':0})
+        team = team_df['TEAM_NAME'].unique()[0]
+        plot_data = team_df[stat].tolist()
+
+        if stat == 'WL':
+            for i in range(len(plot_data) - 1):
+                plot_data[i+1] += plot_data[i]
+            
+
+            for i in range(len(plot_data)):    
+                plot_data[i] /= i+1
+
+
+        images[team] = plot_image(plot_data, col, team)
+
+    
+
+    return jsonify(images)
+
+
 
 
 if __name__ == '__main__':

@@ -1,0 +1,276 @@
+{% extends "layout.html" %}
+{% block title %}Stats - Game Maker{% endblock %}
+
+{% block content %}
+<div class="main-content" style="font-family: 'Montserrat', sans-serif; display: flex; flex-direction: row; gap: 2em; justify-content: center; margin-top: 2em; margin-bottom: 6em;">
+    <div style="display: flex; flex-direction: column; gap: 1em; justify-items: center; min-width: 10%;">
+        <label for="data-select" style="font-weight: 600;align-content: center; text-align: center;">Select Data</label>
+        <select name="data-select" id="data-select"  style="
+            padding: 10px 16px;
+            background-color: #ffffff;
+            color: rgb(0, 0, 0);
+            font-weight: 600;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+        ">
+            <option value="teams">Teams</option>
+            <option value="players">Players</option>
+        </select>
+        <button type="button" id="retrieve-button" onclick="retrieveTable()" style="
+            padding: 10px 16px;
+            background-color: #1D428A;
+            color: white;
+            font-weight: 600;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        ">
+            RETRIEVE
+        </button>
+        <label for="visualizer-div" style="font-weight: 600 ;align-content: center; text-align: center;">Visualize Stat</label>
+        <div name="visualizer-div" id="visualizer-div" style="min-height: 45px; height: auto; border: 1px solid #ccc; border-radius: 4px; align-content: center;">
+            <p style="text-align: center; justify-content: center; display: flex;">Drop rows here</p>
+        </div>
+
+        <label for="col-select" style="font-weight: 600;align-content: center; text-align: center;">Select Column</label>
+        <select name="col-select" id="col-select"  style="
+            padding: 10px 16px;
+            background-color: #ffffff;
+            color: rgb(0, 0, 0);
+            font-weight: 600;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+        " disabled>
+        </select>
+        <button type="button" id="graph-button" onclick="graphData()" style="
+            padding: 10px 16px;
+            background-color: #1D428A;
+            color: white;
+            font-weight: 600;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        ">
+            GRAPH
+        </button>
+        <button type="button" id="clear-button" onclick="clearVis()" style="
+            padding: 10px 16px;
+            background-color: #1D428A;
+            color: white;
+            font-weight: 600;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        ">
+            CLEAR
+        </button>
+
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 1em; justify-items: center;">
+
+    </div>
+    <div style="display: flex; flex-direction: column; gap: .5em; justify-items: center; align-content: center; min-width: 60%;">
+        <h3 id="header-div" style="align-content: center; border-bottom: solid 1px; min-width: 60%; text-align: center;">2024-25 Season Data</h3>
+        <div id="table-div" style="overflow: auto; height: 400px;">
+            <p style="text-align: center;"> Retrieve data... </p>
+        </div>
+        
+        <div id="image-div"></div>
+        
+    </div>
+</div>
+
+<script>
+    function retrieveTable() {
+        const tableDiv = document.getElementById('table-div');
+        const selectedTable = document.getElementById("data-select").value;
+        fetch('/get_db_table', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ selected_table: selectedTable })
+        })
+        .then(res => res.json())
+        .then(data => {
+            let newHTML = `
+                <table>
+                    <tr style="background-color: #1D428A; color: white;">
+            `;
+            
+            const colSelect = document.getElementById('col-select');
+            colSelect.innerHTML = '';
+            colSelect.disabled = false;
+            data.columns.forEach(col => {
+                newHTML += `
+                  <th style="padding: 12px; border: 1px solid #ddd;">${col}</th>
+                `;
+
+                if (col != 'TEAM' && col != 'AGE' && col != 'PLAYER' ) {
+                    const option = document.createElement('option');
+
+                    option.textContent = `${col}`;
+                    option.value = `${col}`;
+                    colSelect.appendChild(option);
+                }
+
+            });
+            newHTML += `
+                    </tr>
+            `;
+
+            for (const [id, team] of Object.entries(data.teams_data)) {
+
+                let rowHTML = `<tr id="${id}" style="backgroundColor: #f9f9f9;" draggable="True" class="data-row">`;
+                team.forEach(field => {
+                    rowHTML += `<td style="padding: 12px; border: 1px solid #ddd;">${field}</td>`
+                });
+                rowHTML += `</tr>`;
+                newHTML += rowHTML;
+            }
+            
+            newHTML += `
+                </table>
+            `;
+
+            tableDiv.innerHTML = newHTML;
+            tableDiv.style.resize = 'vertical';
+            
+            document.querySelectorAll('.data-row').forEach( row => {
+                row.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', row.id); // transfer the row ID
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+            });
+
+            clearVis();
+
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Failed to retrieve data.');
+        });
+    }
+
+    function initVisualizerDrop() {
+        const visDiv = document.getElementById('visualizer-div');
+        visDiv.innerHTML = `
+            <table id="visualizer-table" style="width: 100%;">
+            </table>
+        `;
+    }
+
+    const visDrop = document.getElementById('visualizer-div');
+
+    visDrop.addEventListener('dragover', (e) => {
+        e.preventDefault(); // Required to allow drop
+        e.dataTransfer.dropEffect = 'move';
+    });
+
+    visDrop.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const rowId = e.dataTransfer.getData('text/plain');
+        const draggedRow = document.getElementById(rowId);
+        const dataSelect = document.getElementById("data-select").value;
+        if (dataSelect == 'players') {
+            alert('Graphing not available for player data');
+            return;
+        }
+        
+
+        if (draggedRow) {
+            if (document.getElementById('visualizer-table') == null) {
+                initVisualizerDrop();
+            }
+
+            const visTable = document.getElementById('visualizer-table');
+
+            const tableRows = document.querySelectorAll('.vis-table-row');
+            
+            if (tableRows.length > 3) {
+                alert("A max of 4 row can be visualized at a time");
+                return
+            }
+
+            for (let i = 0; i < tableRows.length; i++) {
+                if (tableRows[i].dataset.rowId == rowId) {
+                    alert("Cannot have duplicate rows");
+                    return
+                }
+            }
+
+
+
+            const row = document.createElement('tr');
+            row.className = 'vis-row';
+            row.style.backgroundColor = '#f9f9f9';
+            row.innerHTML = `
+                <td style="padding: 12px; border: 1px solid #ddd;" data-row-id="${draggedRow.id}" class="vis-table-row">${draggedRow.cells[0].textContent}</td>
+            `;
+            
+            visTable.appendChild(row);
+        }
+
+    
+        
+    });
+
+
+    function clearVis() {
+        const visDiv = document.getElementById('visualizer-div');
+        visDiv.style.alignContent = 'center';
+        visDiv.innerHTML = `<p style="text-align: center; justify-content: center; display: flex;">Drop rows here</p>`;
+
+        document.getElementById('image-div').innerHTML = '';
+        
+    }
+
+    function graphData() {
+        const visRows = document.querySelectorAll('.vis-table-row');
+        if (!visRows) {
+            alert('No rows to graph');
+            return;
+        }
+
+        const ids = [];
+        visRows.forEach( row => {
+            ids.push(row.dataset.rowId);
+        });
+
+        const selectedTable = document.getElementById("data-select").value;
+        const selectedCol = document.getElementById("col-select").value;
+    
+
+
+        fetch('/get_plot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ selected_table: selectedTable, selected_column: selectedCol, row_ids: ids })
+        })
+        .then(res => res.json())
+        .then(images => {
+            const imageDiv = document.getElementById('image-div');
+            imageDiv.innerHTML = '';
+            for (const [name, base64] of Object.entries(images)) {
+                const img = document.createElement('img');
+                img.style.maxWidth = '50%';
+                img.src = `data:image/png;base64,${base64}`;
+                imageDiv.appendChild(img);
+            }
+
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Failed to plot data.');
+        });
+
+
+
+    }
+
+
+</script>
+{% endblock %}
