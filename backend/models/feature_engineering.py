@@ -4,14 +4,14 @@ import numpy as np
 
 
 def display_heatmap(matrix, title, xlabel, ylabel, plot_corr, save_corr,
-                    cmap='bwr'):
+                    league, cmap='bwr'):
     plt.figure(figsize=(60, 48))
     sns.heatmap(matrix, annot=True, cmap=cmap, fmt=".2f")
     plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     if save_corr:
-        plt.savefig(f"ml_imgs/{title}.png")
+        plt.savefig(f"backend/models/ml_imgs/{league}_model/{title.lower().replace(' ', '_')}.png")
     if plot_corr:
         plt.show()
     plt.close()
@@ -19,7 +19,7 @@ def display_heatmap(matrix, title, xlabel, ylabel, plot_corr, save_corr,
 
 def correlation_matrix(dataframe, threshold_mag=None, lower=False, k=0,
                        plot_corr=False, xlabel=None, ylabel=None,
-                       title_append=None, save_corr=False):
+                       title_append=None, save_corr=False, league=None):
     title = "Feature Correlation Matrix"
     corr_matrix = dataframe.copy().corr()
 
@@ -38,7 +38,7 @@ def correlation_matrix(dataframe, threshold_mag=None, lower=False, k=0,
         title += title_append
     if plot_corr or save_corr:
         display_heatmap(
-            corr_matrix, title, xlabel, ylabel, plot_corr, save_corr
+            corr_matrix, title, xlabel, ylabel, plot_corr, save_corr, league
             )
 
     return corr_matrix

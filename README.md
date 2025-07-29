@@ -18,7 +18,7 @@ Front End:
 - CSS
 
 Back End: 
-- Python (Flaks)
+- Python (Flask)
 
 API: 
 - Google Firebase Authentication API

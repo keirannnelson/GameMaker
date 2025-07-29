@@ -37,10 +37,23 @@ def get_col_lstsq(col_list):
     return bias, momentum
 
 
+def get_new_row_data(base_data, num_times_seen, n):
+    for i in range(len(base_data)):
+        if i % 4 == 2:
+            y_new = base_data.iloc[i-1] * num_times_seen + base_data.iloc[i-2]
+            base_data.iloc[i] = ((n + num_times_seen) * base_data.iloc[i] +
+                                y_new)/(n + num_times_seen + 1)
+        elif i % 4 == 3:
+            base_data.iloc[i] = max(base_data.iloc[i-1], base_data.iloc[i])
+
+    return list(base_data)
+
+
 def get_game_stats_data_df(
-    league, season_year, target_team_ids=None, target_game_date=None,
-    training_and_testing=False
+    league, season_year, target_team_ids=None, target_game_dates=None,
+    target_game_ids=None, training_and_testing=False
 ):
+    target_team_ids = list(set(target_team_ids))
     df = pd.read_sql_table(
         f"{league}_game_stats_{season_year}",
         f"sqlite:///backend/database/{league}_game_stats.db"
@@ -50,11 +63,18 @@ def get_game_stats_data_df(
         df = df[df['SEASON_ID'] == season_prefix]
     if target_team_ids:
         df = df[df['TEAM_ID'].isin(target_team_ids)]
-    if target_game_date:
-        df = df[df['GAME_DATE'] <= target_game_date]
+    target_game_dates.sort()
+    if target_game_dates:
+        df = df[df['GAME_DATE'] <= target_game_dates[-1]]
     df['HOME'] = df['MATCHUP'].apply(
         lambda x: int('vs.' in x) if isinstance(x, str) else 0
     )
+
+    n_for_each_team = {team_id: 0 for team_id in target_team_ids}
+    for index, row in df.iterrows():
+        if row['GAME_DATE'] < target_game_dates[0]:
+            team_id = row['TEAM_ID']
+            n_for_each_team[team_id] = n_for_each_team[team_id] + 1
 
     if "LEAGUE" in df.columns:
         df.drop(
@@ -88,9 +108,8 @@ def get_game_stats_data_df(
         team_dfs.append(team_df)
 
     teams_df = pd.concat(team_dfs, ignore_index=True)
-
-    if target_game_date:
-        teams_df = teams_df[teams_df["GAME_DATE"] == target_game_date]
+    if target_game_dates:
+        teams_df = teams_df[teams_df["GAME_DATE"].isin(target_game_dates)]
     teams_df.drop(
         ['FGM', 'FGA', 'FG3M', 'FG3A', 'FTM', 'FTA'], axis=1,
         inplace=True
@@ -111,7 +130,7 @@ def get_game_stats_data_df(
     away_df['GAME_ID'] = away_df['GAME_ID_OPP']
     merged_df = pd.merge(home_df, away_df, on='GAME_ID')
     columns_to_drop = [
-        'SEASON_ID_OPP', 'TEAM_ID_OPP', 'HOME_OPP', 'MIN_OPP', 'MATCHUP_OPP',
+        'SEASON_ID_OPP', 'HOME_OPP', 'MIN_OPP', 'MATCHUP_OPP',
         'HOME',
     ]
     merged_df.drop(columns=columns_to_drop, inplace=True, errors='ignore')
@@ -125,7 +144,7 @@ def get_game_stats_data_df(
         errors='ignore'
     )
     metadata = [
-        "SEASON_ID", "TEAM_ABBREVIATION", "TEAM_NAME", "GAME_ID", "MATCHUP"
+        "SEASON_ID", "TEAM_ABBREVIATION", "TEAM_NAME", "MATCHUP"
     ]
     metadata_opp = ["TEAM_ABBREVIATION_OPP", "TEAM_NAME_OPP", "GAME_ID_OPP"]
     merged_df.drop(
@@ -142,29 +161,78 @@ def get_game_stats_data_df(
         merged_df.replace({'L': 0, 'W': 1}, inplace=True)
     merged_df.dropna(subset=["TEAM_ID", "MIN_AVG"], inplace=True)
     merged_df.sort_values('GAME_DATE', inplace=True)
+    merged_df = merged_df[merged_df["GAME_ID"].isin(target_game_ids)]
+    merged_df.drop(columns=['GAME_ID'], inplace=True)
+
+    if len(target_game_dates) > 1:
+        team_ids = list(
+            set(
+                list(merged_df["TEAM_ID"]) + list(merged_df["TEAM_ID_OPP"])
+            )
+        )
+        team_ids_seen = {team_id: 0 for team_id in team_ids}
+        team_ids_base_data = {team_id: [] for team_id in team_ids}
+
+
+        merged_df_iter = merged_df.iterrows()
+        for index, row in merged_df_iter:
+            team_id = row['TEAM_ID']
+            team_id_opp = row['TEAM_ID_OPP']
+
+            if team_ids_seen[team_id] == 0:
+                team_ids_base_data[team_id] = row.loc["MIN_BIAS":"PLUS_MINUS_MAX"]
+            else:
+                merged_df.loc[index, "MIN_BIAS":"PLUS_MINUS_MAX"] = get_new_row_data(
+                    team_ids_base_data[team_id], team_ids_seen[team_id],
+                    n_for_each_team[team_id]
+                )
+
+            if team_ids_seen[team_id_opp] == 0:
+                team_ids_base_data[team_id_opp] = row.loc["MIN_BIAS_OPP":"PLUS_MINUS_MAX_OPP"]
+            else:
+                merged_df.loc[index, "MIN_BIAS_OPP":"PLUS_MINUS_MAX_OPP"] = get_new_row_data(
+                    team_ids_base_data[team_id_opp], team_ids_seen[team_id_opp],
+                    n_for_each_team[team_id_opp]
+                )
+
+            team_ids_seen[team_id] = team_ids_seen[team_id] + 1
+            team_ids_seen[team_id_opp] = team_ids_seen[team_id_opp] + 1
+
+    merged_df.drop(columns=["TEAM_ID_OPP"], inplace=True, errors='ignore')
 
     return merged_df
 
 
 if __name__ == "__main__":
+    # test_df1 = get_game_stats_data_df(
+    #     "nba",
+    #     "2023-24",
+    #     target_team_ids=[
+    #         1610612742, 1610612760, 1610612753, 1610612749, 1610612757,
+    #         1610612758
+    #     ],
+    #     target_game_dates="2024-04-14",
+    #     training_and_testing=True
+    #
+    # )
+    # print(test_df1)
+
     test_df1 = get_game_stats_data_df(
         "nba",
-        "2023-24",
-        target_team_ids=[
-            1610612742, 1610612760, 1610612753, 1610612749, 1610612757,
-            1610612758
-        ],
-        target_game_date="2024-04-14",
-        training_and_testing=True
+        "2024-25",
+        target_team_ids=[1610612760, 1610612737, 1610612751],
+        target_game_dates=["2024-10-17", "2024-10-23"],
+        target_game_ids=['0012400064', '0022400064'],
+        training_and_testing=False
 
     )
     print(test_df1)
 
-    test_df2 = get_game_stats_data_df(
-        "nba",
-        "2023-24",
-        target_team_ids=None,
-        target_game_date=None,
-        training_and_testing=True
-    )
-    print(test_df2)
+    # test_df2 = get_game_stats_data_df(
+    #     "nba",
+    #     "2023-24",
+    #     target_team_ids=None,
+    #     target_game_dates=None,
+    #     training_and_testing=True
+    # )
+    # print(test_df2)

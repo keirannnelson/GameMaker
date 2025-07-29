@@ -1,31 +1,120 @@
 {% extends "layout.html" %}
 {% block title %}Glossary - Game Maker{% endblock %}
 
+{% block head %}
+<meta charset="UTF-8">
+  <style>
+    .confusion-matrix {
+      display: grid;
+      grid-template-columns: 120px 100px 100px;
+      grid-template-rows: 40px 100px 100px;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 20px auto;
+      border: 2px solid black;
+      width: max-content;
+    }
+
+    .confusion-matrix div {
+      border: 1px solid black;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    .label {
+      font-weight: bold;
+      background-color: #f4f4f4;
+    }
+
+    .empty {
+      border: none;
+      background: none;
+    }
+
+    .correct {
+      background-color: #d4edda;
+    }
+
+    .incorrect {
+      background-color: #f8d7da;
+    }
+  </style>
+{% endblock %}
+
 {% block content %}
 <div class="glossary-content" style="padding: 2em; max-width: 800px; margin: auto; font-family: 'Montserrat', sans-serif;">
-  <h1 style="color: #1D428A; margin-bottom: 1em;">Glossary</h1>
-  <ul style="line-height: 1.8; font-size: 1em; list-style-type: none; padding-left: 0;">
+  <h1>Glossary</h1>
+  <br>
+  <p>Below are the 20 original basketball statistics gathered from our APIs. If in a per-player database table, each statistic corresponds to that person's alone. If in a per-team database table, each statistic corresponds to the average of all per-player statistics except MIN which corresponds to the sum of the per-player values.</p>
+  <br>
+  <ul style="line-height: 1.8; font-size: 1em; padding-left: 30px;">
+    <li><strong>MIN</strong>: Minutes — Minutes played on the court </li>
     <li><strong>FGM</strong>: Field Goals Made</li>
     <li><strong>FGA</strong>: Field Goals Attempted</li>
-    <li><strong>FG%</strong>: Field Goal % — Shooting percentage</li>
+    <li><strong>FG_PCT</strong>: Field Goal Percentage — FGM divided by FGA</li>
     <li><strong>FG3M</strong>: 3-Point Field Goals Made</li>
     <li><strong>FG3A</strong>: 3-Point Field Goals Attempted</li>
-    <li><strong>FG3%</strong>: 3-Point % — Shooting percentage from 3</li>
+    <li><strong>FG3_PCT</strong>: 3-Point Percentage — FG3M divided by FG3A</li>
     <li><strong>FTM</strong>: Free Throws Made</li>
     <li><strong>FTA</strong>: Free Throws Attempted</li>
-    <li><strong>FT%</strong>: Free Throw %</li>
+    <li><strong>FT_PCT</strong>: Free Throw Percentage — FTM divided by FTA</li>
     <li><strong>OREB</strong>: Offensive Rebounds — Rebounds grabbed off your team’s missed shots</li>
     <li><strong>DREB</strong>: Defensive Rebounds — Rebounds grabbed after opponent misses</li>
-    <li><strong>REB</strong>: Total Rebounds</li>
+    <li><strong>REB</strong>: Total Rebounds — Sum of OREB and DREB</li>
     <li><strong>AST</strong>: Assists — Passes leading directly to a made basket</li>
     <li><strong>STL</strong>: Steals — How many times this player took the ball from an opponent</li>
     <li><strong>BLK</strong>: Blocks — Shots blocked while defending</li>
     <li><strong>TO</strong>: Turnovers — Times the player lost the ball to the other team</li>
     <li><strong>PF</strong>: Personal Fouls — Number of fouls committed by the player</li>
     <li><strong>PTS</strong>: Total points scored</li>
-    <li><strong>+/-</strong>: Net team score while this player was on the court</li>
+    <li><strong>PLUS-MINUS</strong>: Net team score while this player was on the court</li>
   </ul>
 
+  <br>
+  <p>
+    The following are common metrics used throughout the program, defined:
+  </p>
+  <br>
+  <ul style="line-height: 1.8; font-size: 1em; padding-left: 30px;">
+    <li><strong>True Positives (TP)</strong>: The number of instances where the model correctly predicted the positive class. Example: Model predicts a game will be a win, and it actually is a win.</li>
+    <li><strong>True Negatives (TN)</strong>: The number of instances where the model correctly predicted the negative class. Example: Model predicts a loss, and it indeed ends up being a loss.</li>
+    <li><strong>False Positives (FP)</strong>: The number of instances where the model incorrectly predicted the positive class (a "false alarm"). Example: Model predicts a win, but the game is actually a loss.</li>
+    <li><strong>False Negative (FN)</strong>: The number of instances where the model incorrectly predicted the negative class (a "missed detection"). Example: Model predicts a loss, but the game is actually a win.</li>
+    <li><strong>Confusion Matrix (binary outcome case)</strong>: A 2×2 table that summarizes the counts of TP, TN, FP, and FN. It provides a full breakdown of the model’s performance across all outcomes. A visual breakdown will be presented below.</li>
+    <li><strong>Accuracy</strong>: The proportion of total predictions that were correct. Used when classes are roughly balanced. \( Accuracy = \frac{TP + TN}{TP + TN + FP + FN} \)</li>
+    <li><strong>Recall</strong>: Measures how well the model identifies actual positives. Useful when missing positives is costly (e.g., predicting wins correctly). \( Recall = \frac{TP}{TP + FN} \)</li>
+    <li><strong>Precision</strong>: Measures how many of the predicted positives are actually correct. Useful when false positives are costly (e.g., betting on predicted wins). \( Precision = \frac{TP}{TP + FP} \)</li>
+    <li><strong>F1 Score</strong>: The harmonic mean of precision and recall. It balances both metrics into a single score. Best used when you need a trade-off between precision and recall. \( F1 = \frac{2*Recall*Precision}{Recall+Precision} \)</li>
+  </ul>
+
+  <br>
+  <br>
+  <p>
+    Confusion matrix visual breakdown:
+  </p>
+  <br>
+  <div class="confusion-matrix">
+    <div class="empty"></div>
+    <div class="label">Predicted Positive</div>
+    <div class="label">Predicted Negative</div>
+
+    <div class="label">Actual Positive</div>
+    <div class="correct">TP</div>
+    <div class="incorrect">FP</div>
+
+    <div class="label">Actual Negative</div>
+    <div class="incorrect">FN</div>
+    <div class="correct">TN</div>
+  </div>
+
+  <br>
+  <br>
+  <p>
+    You can download all the raw (before processing and feature engineering) data we used to train our models below.
+  </p>
 
   <a href="/download_db" download
    style="

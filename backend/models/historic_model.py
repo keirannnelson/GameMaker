@@ -36,7 +36,7 @@ def get_X_and_y(df):
     return X, y, home_ids, game_dates
 
 
-def plot_save_confusion_matrix(cm, title_prefix=None):
+def plot_save_confusion_matrix(cm, league, title_prefix=None):
     disp = ConfusionMatrixDisplay(
         confusion_matrix=cm, display_labels=["Positive", "Negative"]
     )
@@ -45,7 +45,7 @@ def plot_save_confusion_matrix(cm, title_prefix=None):
     plt.title(title)
     plt.tight_layout()
     plt.grid(False)
-    filename = f"ml_imgs/{title.lower().replace(' ', '_')}.png"
+    filename = f"backend/models/ml_imgs/{league}_model/{title.lower().replace(' ', '_')}.png"
     plt.savefig(filename, bbox_inches='tight')
     plt.show()
     plt.close()
@@ -106,7 +106,8 @@ def train_model(X, y, league, get_corr_matrix=False, save_conf_matrix=False):
             correlation_matrix(
                 X_train_full, threshold_mag=threshold_mag, k=0, plot_corr=False,
                 xlabel="Features", ylabel="Features",
-                title_append=f" for Pre-Fold {i + 1}", save_corr=True
+                title_append=f" for Pre-Fold {i + 1}", save_corr=True,
+                league=league
             )
         dropped_features = get_dropped_features(
             X_train_full, threshold_mag=threshold_mag
@@ -118,7 +119,8 @@ def train_model(X, y, league, get_corr_matrix=False, save_conf_matrix=False):
             correlation_matrix(
                 X_train_full, threshold_mag=threshold_mag, k=0, plot_corr=False,
                 xlabel="Features", ylabel="Features",
-                title_append=f" for Post-Fold {i + 1}", save_corr=True
+                title_append=f" for Post-Fold {i + 1}", save_corr=True,
+                league=league
             )
         fold_data["dropped_features"] = dropped_features
 
@@ -219,7 +221,7 @@ def train_model(X, y, league, get_corr_matrix=False, save_conf_matrix=False):
         recall = recall_score(y_test, y_pred, zero_division=0)
         precision = precision_score(y_test, y_pred, zero_division=0)
         f1 = f1_score(y_test, y_pred, zero_division=0)
-        cm = confusion_matrix(y_test, y_pred, labels=[0, 1])
+        cm = confusion_matrix(y_test, y_pred, labels=[1, 0])
 
         accuracies.append(acc)
         recalls.append(recall)
@@ -241,7 +243,10 @@ def train_model(X, y, league, get_corr_matrix=False, save_conf_matrix=False):
     for i, cm in enumerate(cms):
         print(f"Fold {i+1}:\n{cm}")
         if save_conf_matrix:
-            plot_save_confusion_matrix(cm, title_prefix=f"Fold {i + 1} ")
+            plot_save_confusion_matrix(
+                cm, league,
+                title_prefix=f"Fold {i + 1} "
+            )
     print("=" * 100)
 
 
@@ -290,7 +295,7 @@ def make_preds(
         recall = recall_score(y_test, y_preds)
         precision = precision_score(y_test, y_preds)
         f1 = f1_score(y_test, y_preds)
-        cm = confusion_matrix(y_test, y_preds, labels=[0, 1])
+        cm = confusion_matrix(y_test, y_preds, labels=[1, 0])
         accs.append(acc)
         recalls.append(recall)
         pres.append(precision)
@@ -305,7 +310,7 @@ def make_preds(
     final_recall = recall_score(y, final_preds, zero_division=0)
     final_precision = precision_score(y, final_preds, zero_division=0)
     final_f1 = f1_score(y, final_preds, zero_division=0)
-    final_cm = confusion_matrix(y, final_preds, labels=[0, 1])
+    final_cm = confusion_matrix(y, final_preds, labels=[1, 0])
 
     if verbose:
         print("-" * 100)
@@ -319,7 +324,7 @@ def make_preds(
 
     if get_conf_matrix_img:
         plot_save_confusion_matrix(
-            final_cm, title_prefix=f"{season_year} Season "
+            final_cm, league, title_prefix=f"{season_year} Season "
             )
 
     return (list(final_preds), list(final_prob), final_acc, final_recall,
@@ -328,7 +333,7 @@ def make_preds(
 
 if __name__ == "__main__":
     do_train_nba_model = False
-    do_train_ncaa_model = False
+    do_train_ncaa_model = True
     do_test_nba_model = False
     do_test_ncaa_model = False
 
@@ -349,7 +354,7 @@ if __name__ == "__main__":
         X, y, *_ = get_X_and_y(df)
         X = X[:(3 * len(X) // 4)]
         y = y[:(3 * len(y) // 4)]
-        train_model(X, y, league, get_corr_matrix=False, save_conf_matrix=False)
+        train_model(X, y, league, get_corr_matrix=True, save_conf_matrix=True)
     if do_test_nba_model:
         league = "nba"
         season_year = "2024-25"
@@ -379,7 +384,7 @@ if __name__ == "__main__":
         X = X[(3 * len(X) // 4):]
         y = y[(3 * len(y) // 4):]
         preds, probs, acc, recall, precision, f1, cm = make_preds(
-            X, y, league, verbose=False, get_conf_matrix_img=False,
+            X, y, league, verbose=False, get_conf_matrix_img=True,
             season_year=season_year
         )
 
