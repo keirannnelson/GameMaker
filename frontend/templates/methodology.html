@@ -1,26 +1,137 @@
 {% extends "layout.html" %}
 {% block title %}Methodology - Game Maker{% endblock %}
 
+{% block head %}
+  {{ super() }}
+<style>
+  .styled-table {
+    width: 80%;
+    margin: 20px auto;
+    border-collapse: collapse;
+    font-family: 'Montserrat', 'sans-serif';
+    font-size: 16px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .styled-table thead {
+    background-color: #333;
+    color: white;
+  }
+
+  .styled-table th, .styled-table td {
+    padding: 12px 20px;
+    text-align: center;
+    border: 1px solid #ccc;
+  }
+
+  .styled-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+
+  .styled-table tbody tr:hover {
+    background-color: #f1f1f1;
+  }
+
+   #table-of-contents {
+   padding: 20px;
+   border-radius: 12px;
+   font-family: 'Montserrat', 'sans-serif';
+ }
+
+ #table-of-contents h1 {
+   font-size: 28px;
+   margin-bottom: 10px;
+   border-bottom: 2px solid black;
+   padding-bottom: 5px;
+ }
+
+ .toc {
+   list-style: none;
+   padding-left: 20px;
+ }
+
+ .toc li {
+   margin: 8px 0;
+ }
+
+ .toc > li > a {
+   font-weight: bold;
+   font-size: 18px;
+   color: #1D428A;
+   text-decoration: none;
+   transition: color 0.2s ease;
+ }
+
+ .toc li a:hover {
+   color: #005fa3;
+   text-decoration: underline;
+ }
+
+ .toc ul {
+   list-style-type: disc;
+   margin-left: 20px;
+   font-size: 16px;
+ }
+
+ #table-of-contents {
+  width: 100%;
+ }
+</style>
+{% endblock %}
+
 {% block content %}
-  <div class="methodology-content" style="padding: 2em; max-width: 800px; margin: auto; font-family: 'Montserrat', sans-serif;">
-    <h1>Methodology</h1>
-    <br><br>
+  <div class="methodology-content" style="max-width: 800px; margin: auto; font-family: 'Montserrat', sans-serif;">
+     <div id="table-of-contents">
+       <h1>Table of Contents</h1>
+       <ul class="toc">
+         <li>
+           <a href="#nba_model">NBA Model</a>
+           <ul>
+             <li><a href="#nba_methodology">Methodology</a></li>
+             <li><a href="#nba_results">Results & Discussion</a></li>
+           </ul>
+         </li>
+         <li>
+           <a href="#ncaa_model">NCAA Model</a>
+           <ul>
+             <li><a href="#ncaa_methodology">Methodology</a></li>
+             <li><a href="#ncaa_results">Results & Discussion</a></li>
+           </ul>
+         </li>
+         <li><a href="#simulation">Simulation Version of Models</a></li>
+         <li>
+           <a href="#appendix">Appendix</a>
+           <ul>
+             <li><a href="#nba_appendix">NBA Model</a></li>
+             <li><a href="#ncaa_appendix">NCAA Model</a></li>
+           </ul>
+         </li>
+       </ul>
+     </div>
+
+    <h1 id="nba_model">NBA Model</h1>
+   <br>
+    <h2 id="nba_methodology">Methodology</h2>
     <p>
-    To enable backtesting across multiple seasons, we restricted our training data to the 2023–24 NBA season. Due to this constraint and the relatively limited volume of game data available via the API – insufficient for effectively training a neural network at least – we chose not to use a time-series-based deep learning approach. Instead, we implemented a structured, fold-based machine learning pipeline centered around a stacked ensemble model for binary classification. This ensemble method leverages the strengths of multiple base models by passing the output of one as input to the next, allowing each model to correct errors made by its predecessor.
-    Out of the original 20 basketball statistics, five were redundant because they directly contributed to the calculation of others—either as numerators, denominators in percentage metrics (e.g., FGA and FGM are included in FG_PCT), or as components summed to form aggregate stats. These five redundant features were therefore removed to streamline the dataset. Further, To better structure our features for ensemble learning, we engineered four time-aware statistics – AVG, MAX, BIAS, and MOM – for each of the 15 core basketball statistics (explained in detail on the glossary page). These were computed per game instance in the dataset as follows:
+    To enable backtesting across a whole season, we restricted our training data to the 2023–24 NBA season. Due to this constraint and the relatively limited volume of game data available via the NBA API – insufficient for effectively training a neural network at least – we chose not to use a time-series-based deep learning approach. Instead, we implemented a structured, fold-based machine learning pipeline centered around a stacked ensemble model for binary classification. This ensemble method leverages the strengths of multiple base models by passing the output of one as input to the next, allowing each model to correct errors made by its predecessor.
     </p>
+   <br>
+   <p>
+    Out of the original 20 basketball statistics (explained in detail on the glossary page), five were redundant because they directly contributed to the calculation of others—either as numerators, denominators in percentage metrics (e.g., FGA and FGM are included in FG_PCT), or as components summed to form aggregate stats. However, we found, for performance reasons, it was best to remove only one out of the aforementioned five statistics – REB. Further, To better structure our features for ensemble learning, we engineered four time-aware statistics – AVG, MAX, BIAS, and MOM – for each of the 19 core basketball statistics. These were computed per game instance in the dataset as follows:
+   </p>
     <br>
-    <ul>
+    <ul style="padding-left: 30px;">
         <li>AVG: The average value of the stat prior to the game date, excluding the game itself (to preserve prediction integrity).</li>
-     <br>   <li>MAX: The maximum value observed for that stat before the game date.</li>
-     <br>   <li>BIAS and MOM: Derived from a simple least squares linear regression fit to the stat's historical values – BIAS represents the intercept (a baseline), and MOM (momentum) represents the slope (the trend). These were included to capture directional trends over time.</li>
+        <li>MAX: The maximum value observed for that stat before the game date.</li>
+        <li>BIAS and MOM: Derived from a simple least squares linear regression fit to the stat's historical values – BIAS represents the intercept (a baseline), and MOM (momentum) represents the slope (the trend). These were included to capture directional trends over time.</li>
     </ul>
     <br>
-    <p>After generating these features, the remaining original 15 raw stats were dropped, leaving us with 60 engineered features per team per game instance. Since basketball game outcomes are inherently relative rather than absolute, we appended the opposing team's 60 features (feature names appended with _OPP indicate values corresponding to the opposing team) to the same row, always listing the home team's features first. This transformation halved the number of examples but significantly improved their informational quality, resulting in 120 features per instance. The data instances were chronologically ordered, with the earliest game appearing first in the dataset. This ensured temporal integrity and prevented data leakage from future information influencing past predictions.</p>
+    <p>After generating these features, the remaining original 19 raw stats were dropped, leaving us with 76 engineered features per team per game instance. Since basketball game outcomes are inherently relative rather than absolute, we appended the opposing team's 76 features (feature names appended with _OPP indicate values corresponding to the opposing team) to the same row, always listing the home team's features first. This transformation halved the number of examples but significantly improved their informational quality, resulting in 152 features per instance. The data instances were chronologically ordered, with the earliest game appearing first in the dataset. This ensured temporal integrity and prevented data leakage from future information influencing past predictions.
+</p>
     <br>
     <p>This constituted our input feature dataset X. The corresponding label vector y was a binary indicator: 1 if the home team won the game, 0 otherwise. The original dataset used to construct the input matrix X and target vector y is available for download via the Glossary pageThe overall workflow consisted of:</p>
     <br>
-   <ul>
+   <ul style="padding-left: 30px;">
     <li>Data preprocessing (described above),</li>
     <li>Feature engineering and selection (guided by correlation analysis),</li>
     <li>Model training via ensemble methods with threshold optimization to calibrate predicted probabilities,</li>
@@ -28,46 +139,48 @@
     </li>
    </ul>
     <br><p>A detailed breakdown of the fold-level training and evaluation process follows below.</p><br>
-    <h2> Data Partitioning</h2>
-    <br><p>For each fold, the dataset was split into training and testing sets using predefined indices (train_index and test_index). For each successive fold, the size of the training set increased incrementally – starting with the earliest game instances and progressing chronologically. This setup simulated training on distinct datasets per fold and helped improve the ensemble model’s robustness against overfitting by exposing it to varying temporal patterns across folds. The training set was further divided into a training and validation set using an 80/20 split, with shuffle=False to preserve any temporal structure present in the data. This partitioning ensured that model validation occurred on unseen data within each fold.
+    <h3>Data Partitioning</h3>
+    <p>For each fold, the dataset was split into training and testing sets using predefined indices (train_index and test_index). For each successive fold, the size of the training set increased incrementally – starting with the earliest game instances and progressing chronologically. This setup simulated training on distinct datasets per fold and helped improve the ensemble model’s robustness against overfitting by exposing it to varying temporal patterns across folds. The training set was further divided into a training and validation set using an 80/20 split, with shuffle=False to preserve any temporal structure present in the data. This partitioning ensured that model validation occurred on unseen data within each fold.
     </p><br>
-    <h2>Missing Value Imputation</h2>
-    <br>
+    <h3>Missing Value Imputation</h3>
     <p>We computed the mean of each feature in the training set and imputed missing values in the training, validation, and test sets using these means. This approach avoided data leakage by preventing the validation or test sets from influencing the imputation process.</p>
     <br>
-    <h2>Feature Scaling</h2><br>
+    <h3>Feature Scaling</h3>
     <p>All features were standardized using StandardScaler, which centers and scales features to have zero mean and unit variance. The scaler was fitted exclusively on the training data and then applied to the validation and test sets to ensure consistency and avoid leakage.</p>
     <br>
-    <h2>Feature Selection via Correlation Analysis</h2><br>
+    <h3>Feature Selection via Correlation Analysis</h3>
     <p>To reduce multicollinearity and improve model generalization, we calculated the pairwise Pearson correlation matrix of the scaled training features. Features with absolute correlation values exceeding a threshold magnitude of 0.7 were dropped. This was done prior to model training and consistently applied to the validation and test sets. </p>
    <br>
-    <h2>Model Architecture: Stacked Ensemble</h2><br>
+    <h3>Model Architecture: Stacked Ensemble</h3>
     <p>We implemented a stacked ensemble classifier using the following base learners:
-    <br><ul>
-        <li>Random Forest Classifier: robust, non-parametric models that perform well on structured tabular data. They reduce overfitting through bootstrap aggregation (bagging) and capture complex feature interactions without extensive preprocessing. We included it for its strong baseline performance and its ability to handle noisy, high-dimensional data effectively.</li>
-      <br>  <li>XGBoost Classifier: a high-performance gradient boosting algorithm known for its accuracy and efficiency. It handles missing data internally and is well-suited for tabular, imbalanced, or sparse datasets. Using log-loss as the evaluation metric allows it to optimize directly for probabilistic outputs, which is beneficial when calibrating thresholds or combining models in an ensemble.</li>
-     <br>   <li>Support Vector Classifier (SVC): effective in high-dimensional spaces and can model non-linear decision boundaries through kernel tricks. By enabling probability estimates, the SVC contributes calibrated predictions that complement the outputs of tree-based models. Its inclusion enhances the ensemble’s diversity, particularly when separating data that is not linearly separable.</li>
-      <br>  <li>k-Nearest Neighbors (kNN) Classifier: kNN is a simple yet powerful instance-based learner that makes predictions based on local proximity in feature space. While sensitive to feature scaling and noisy data, its fundamentally different approach – non-parametric and lazy – adds a contrasting inductive bias to the ensemble. It can capture local structure that other global learners may miss.</li>
+    <br><ul style="padding-left: 30px;">
+       <br> <li>Random Forest Classifier: robust, non-parametric models that perform well on structured tabular data. They reduce overfitting through bootstrap aggregation (bagging) and capture complex feature interactions without extensive preprocessing. We included it for its strong baseline performance and its ability to handle noisy, high-dimensional data effectively.</li>
+       <br> <li>XGBoost Classifier: a high-performance gradient boosting algorithm known for its accuracy and efficiency. It handles missing data internally and is well-suited for tabular, imbalanced, or sparse datasets. Using log-loss as the evaluation metric allows it to optimize directly for probabilistic outputs, which is beneficial when calibrating thresholds or combining models in an ensemble.</li>
+       <br> <li>Support Vector Classifier (SVC): effective in high-dimensional spaces and can model non-linear decision boundaries through kernel tricks. By enabling probability estimates, the SVC contributes calibrated predictions that complement the outputs of tree-based models. Its inclusion enhances the ensemble’s diversity, particularly when separating data that is not linearly separable.</li>
+       <br> <li>k-Nearest Neighbors (kNN) Classifier: kNN is a simple yet powerful instance-based learner that makes predictions based on local proximity in feature space. While sensitive to feature scaling and noisy data, its fundamentally different approach – non-parametric and lazy – adds a contrasting inductive bias to the ensemble. It can capture local structure that other global learners may miss.</li>
     </ul>
 <br>
     A logistic regression model served as the final meta-learner. Its role was to learn optimal weights for combining the base learners' probabilistic outputs into a final prediction. The stacking classifier used passthrough=True to retain original features alongside base learner outputs and was trained using 2-fold cross-validation within the training set to optimize internal base model performance.
     </p>
     <br>
-    <h2>Threshold Tuning</h2><br>
+    <h3>Threshold Tuning</h3>
     <p>To convert predicted probabilities into binary class labels, we calibrated the decision threshold (predictions were assigned a value of 1 if the predicted probability met or exceeded the threshold; otherwise, the prediction was 0) using the validation set. We evaluated thresholds in the range [0.30, 0.69] with a step size of 0.01 and selected the classification threshold that maximized the balanced accuracy score, which accounts for potential class imbalance. This approach allowed us to favor higher recall – crucial in the context of sports betting, where minimizing false negatives (i.e., missing potential wins) is often more valuable than maximizing precision.</p>
 <br>
-    <h2>Model Persistence</h2><br>
+    <h3>Model Persistence</h3>
     <p>All relevant fold-specific artifacts, including feature metadata, preprocessing parameters (mean values, scaler), dropped features, the trained stacking model, and the optimal classification threshold, were saved using joblib for reproducibility and downstream inference.</p>
     <br>
-    <h2>Model Predictions</h2><br>
-    <p>To generate predictions, each data instance was passed through all 10 folds of the ensemble pipeline, producing one prediction per fold. The final prediction for a given game was determined by taking the mode of these 10 outputs. In the event of a tie (e.g., five predictions of 0 and five of 1), the final prediction defaulted to 0, as per the behavior of scipy.stats.mode, which returns the smallest value in the case of a tie.</p>
-    <br><br>
-    <h1>Results & Discussion</h1>
+    <h3>Model Predictions</h3>
+    <p>To generate predictions, each data instance was passed through all ten folds of the ensemble pipeline, producing one prediction per fold. The final prediction for a given game was determined by taking the mode of these ten outputs. In the event of a tie (e.g., five predictions of 0 and five of 1), the final prediction defaulted to 0, as per the behavior of scipy.stats.mode, which returns the smallest value in the case of a tie.</p>
     <br>
-    <p>Here, we analyze and break down the results from a single fold – specifically, fold 1 – and present the averages across all folds for each statistic. Furthermore, we include backtesting results for the 2024–25 NBA season. Additional images for your review and analysis are provided in the appendix below.
-        Below is the correlation matrix for the features in fold 1’s dataset before feature selection. With 120 features, the matrix is dense and can be challenging to interpret in detail. The key insight lies in the overall density and distribution of strong correlations, which is visually apparent. To enhance clarity, all correlation values below the 0.7 threshold were set to zero and displayed as white cells, simplifying the visualization and highlighting only the most significant feature relationships.
-        </p>
-        <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 1.png') }}"
+    <h2 id="nba_results">Results & Discussion</h2>
+    <p>
+     Here, we analyze and break down the results from a single fold – specifically, fold 1 – and present the averages across all folds for each metric. Furthermore, we include backtesting results for the 2024–25 NBA season. Additional images for your review and analysis are provided in the appendix below.
+     </p>
+     <br>
+     <p>
+      Below is the correlation matrix for the features in fold 1’s dataset before feature selection. With 152 features, the matrix is dense and can be challenging to interpret in detail. The key insight lies in the overall density and distribution of strong correlations, which is visually apparent. To enhance clarity, all correlation values below the 0.7 threshold were set to zero and displayed as white cells, simplifying the visualization and highlighting only the most significant feature relationships.
+     </p>
+        <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 1.png') }}"
         alt="Feature Correlation Matrix"
         style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
    <br>
@@ -75,45 +188,47 @@
         </p>
         <br>
     <p>After removing all redundant features, 53 remain. This reduction is reflected visually in the much sparser correlation matrix below. Notice that aside from the trivial diagonal (highlighted in red), which represents the perfect self-correlation of each feature, no correlations exceed the 0.7 threshold (indicated by blue). This confirms the effective elimination of highly correlated, redundant features.</p>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 1.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 1.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
-    <br><p>By retaining only about 40% of the original features, we significantly reduce training and prediction times while maintaining most of the model’s predictive power.
+    <br><p>By retaining only about 35% of the original features, we significantly reduce training and prediction times while maintaining most of the model’s predictive power.
         Additionally, the confusion matrix for fold 1 is presented below:
         </p>
     <br>
-    <img src="{{ url_for('static', filename='ml_imgs/fold_1_confusion_matrix.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/fold_1_confusion_matrix.png') }}"
     alt="Feature Confusion Matrix"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
-    <p>As shown, there are 89 true positives – cases where the model correctly predicted a win (1) and the game outcome was indeed a win – along with 30 true negatives, 58 false positives, and 9 false negatives. From this confusion matrix, fold 1’s recall is 0.91, precision 0.61, F1 score 0.73, and accuracy 63.98%. While these results appear promising, they should be interpreted with caution since fold 1 was evaluated on a relatively small test set, making the metrics susceptible to volatility. This limitation motivated backtesting on a larger dataset, such as all games during the previous NBA season, to gain more knowingly stable estimates. Despite this, fold 1’s performance remains a useful indicator of training behavior and results. Across all 10 folds, the average metrics were: recall at 0.72, precision 0.64, F1 score 0.67, and accuracy 62.53%, with an average optimal classification threshold of 0.5670 – above the standard threshold of 0.5.</p>
+    <p>As shown, there are 89 true positives – cases where the model correctly predicted a win (1) and the game outcome was indeed a win – along with 30 true negatives, 58 false positives, and 9 false negatives. From this confusion matrix, fold 1’s recall is 0.91, precision 0.61, F1 score 0.73, and accuracy 63.98%. While these results appear promising, they should be interpreted with caution since fold 1 was evaluated on a relatively small test set, making the metrics susceptible to volatility. This limitation motivated backtesting on a larger dataset, such as all games during the previous NBA season, to gain more knowingly stable estimates. Despite this, fold 1’s performance remains a useful indicator of training behavior and results. Across all ten folds, the average metrics were: recall at 0.72, precision 0.64, F1 score 0.67, and accuracy 62.53%, with an average optimal classification threshold of 0.5670 – above the standard threshold of 0.5.</p>
     <br>
     <p>As previously noted, we backtested our model using the 2024–25 NBA season games to gain a clearer understanding of its true predictive performance. The corresponding confusion matrix is shown below.
     </p>
     <br>
-    <img src="{{ url_for('static', filename='ml_imgs/2024-25_season_confusion_matrix.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/2024-25_season_confusion_matrix.png') }}"
     alt="Feature Confusion Matrix"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
-    <p>As observed, the confusion matrix shows 620 true positives, 515 true negatives, 272 false positives, and 313 false negatives. This corresponds to a recall of 0.66, precision of 0.70, F1 score of 0.68, and accuracy of 65.99%, which aligns closely with the metrics obtained during training. While our model is not without limitations, the results highlight the fundamental uncertainty and complexity involved in predicting basketball game outcomes within the context of sports betting.</p>
+    <p>
+     As observed, the confusion matrix shows 620 true positives, 515 true negatives, 272 false positives, and 313 false negatives. This corresponds to a recall of 0.66, precision of 0.70, F1 score of 0.68, and accuracy of 65.99% (above the baseline accuracy of around 55% from just always predicting a home team win), which aligns closely with the metrics obtained during training. While our model is not without limitations, the results highlight the fundamental uncertainty and complexity involved in predicting basketball game outcomes within the context of sports betting.
+    </p>
     <br>
     <p>Since the data is time series–based, it is reasonable to expect model performance to degrade as the test window moves further from the training period, due to evolving factors such as team roster changes, player aging, and other dynamic contextual variables. Note: following standard convention, if the denominator in the calculation of recall, precision, or F1 score is zero, the corresponding metric — while technically undefined — is set to 0.</p>
-    <img src="{{ url_for('static', filename='ml_imgs/2024-25_recall_trend_line.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/2024-25_recall_trend_line.png') }}"
     alt="Recall Trendline"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
 
-    <img src="{{ url_for('static', filename='ml_imgs/2024-25_precision_trend_line.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/2024-25_precision_trend_line.png') }}"
     alt="Precision Trendline"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
 
-    <img src="{{ url_for('static', filename='ml_imgs/2024-25_f1_trend_line.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/2024-25_f1_trend_line.png') }}"
     alt="F1 Trendline"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
 
-    <img src="{{ url_for('static', filename='ml_imgs/2024-25_accuracy_trend_line.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/2024-25_accuracy_trend_line.png') }}"
     alt="Accuracy Trendline"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
@@ -122,241 +237,726 @@
     <p>The red trendline in all four graphs exhibits a slight downward trajectory, aligning with our expectation that model performance gradually declines as the temporal distance from the training window increases. Notably, none of the four metrics vary by more than 0.1 over time, with recall demonstrating the least change—successfully achieving our training objective of prioritizing and stabilizing recall performance.</p>
     <br>
     <br>
-    <h1>Appendix</h1>
-    <p>All curated images related to the machine learning (ML) model, including those previously shown, will be compiled and presented here.
-        Metrics from testing the ML model on the 2024-25 NBA basketball season.
-    </p>
 
+   <h1 id="ncaa_model">NCAA Model</h1>
+   <br>
+    <h2 id="ncaa_methodology">Methodology</h2>
+    <p>
+     The NCAA model was trained on the first 75% of games in the 2024-25 NCAA season. Furthermore, all other parts of the Methodology section are the same as in the NBA case except for “5. Model Architecture: Stacked Ensemble” as the model architecture used for the NCAA model is different than for the NBA model. The NCAA model architecture is described below.
+    </p>
+   <br>
+
+   <p>
+    We implemented a stacked ensemble classifier using the following base learners:
+   </p>
+
+   <ul style="padding-left: 30px;">
+    <br><li>
+     Balanced Random Forest Classifier (BRF): an extension of the standard Random Forest designed to handle imbalanced datasets. It applies bootstrap sampling with class balancing at each tree to ensure minority class representation during training. This makes it especially valuable in binary classification problems where one class is underrepresented, helping to reduce bias and improve recall without sacrificing model robustness.
+    </li>
+    <br><li>
+     XGBoost Classifier (XGB): a scalable gradient boosting framework optimized for both speed and performance. By adjusting scale_pos_weight based on class imbalance and using logloss as the evaluation metric, it produces well-calibrated probabilistic outputs. Its ability to handle sparse, tabular data with missing values makes it a core component of the ensemble’s predictive strength.
+    </li>
+    <br><li>
+     Histogram-Based Gradient Boosting Classifier (HGB):  a fast, regularized variant of gradient boosting that bins continuous features into histograms for efficiency. With built-in support for class_weight='balanced', it directly addresses class imbalance. Its speed and scalability make it a strong choice for large datasets, while its boosting nature brings high predictive power to the ensemble.
+    </li>
+    <br><li>
+     LightGBM Classifier (LGBM): a high-performance gradient boosting implementation optimized for speed and memory efficiency. It grows trees leaf-wise rather than level-wise, which often leads to better accuracy. With class_weight='balanced', it natively accounts for class imbalance, contributing both performance and computational efficiency to the ensemble.
+    </li>
+    <br><li>
+     CatBoost Classifier: is a gradient boosting algorithm particularly effective on categorical features. It handles class imbalance through class_weights and avoids overfitting by using ordered boosting. Its smooth handling of categorical encodings and low sensitivity to hyperparameters make it a reliable, low-maintenance component in the ensemble.
+    </li>
+    <br><li>
+     Logistic Regression: a linear, interpretable model that estimates class probabilities through a sigmoid function. With class_weight='balanced', it compensates for class imbalance and produces calibrated probability scores. Despite its simplicity, its linear inductive bias provides a valuable contrast to non-linear models and strengthens the ensemble’s diversity.
+    </li>
+    <br><li>
+     Support Vector Classifier (SVC): handles high-dimensional data and learns non-linear decision boundaries via kernel methods. Enabling probability estimates allows it to contribute calibrated outputs. Its inclusion offers geometric diversity, particularly useful when class separation is not linearly achievable.
+    </li>
+    <br><li>
+     k-Nearest Neighbors (kNN) Classifier: a non-parametric, instance-based learner that predicts based on the proximity of training points. Though sensitive to scaling and noise, its lazy learning strategy captures local structure in feature space, complementing the global generalization tendencies of other ensemble members.
+    </li>
+    <br><li>
+    Gaussian Naive Bayes (NB): a probabilistic classifier that assumes feature independence and normal distribution. It’s fast, simple, and surprisingly effective in many real-world scenarios. Its unique generative perspective introduces valuable inductive bias to the ensemble and often performs well when data is limited or noisy.
+    </li>
+    <br><li>
+      Easy Ensemble Classifier: a boosting-based meta-learner tailored for imbalanced classification tasks. It builds multiple balanced subsets from the majority class and trains an ensemble of classifiers on each. This method enhances minority class recall while maintaining high overall performance, making it a strategic choice for skewed data distributions.
+    </li>
+   </ul>
+
+   <br>
+   <p>
+   A logistic regression model served as the final meta-learner. Its role was to learn optimal weights for combining the base learners' probabilistic outputs into a final prediction. The stacking classifier used passthrough=True to retain original features alongside base learner outputs and was trained using 3-fold cross-validation within the training set to optimize internal base model performance.
+   </p>
+   <br>
+
+   <h2 id="ncaa_results">Results & Discussion</h2>
+
+   <p>
+    Here, we analyze and break down the results from a single fold – specifically, fold 1 – and present the averages across all folds for each statistic. Furthermore, we include backtesting results for the last 25% of games in the 2024–25 NCAA season. Additional images for your review and analysis are provided in the appendix below.
+   </p>
+   <br>
+   <p>
+    Below is the correlation matrix for the features in fold 1’s dataset before feature selection. With 152 features, the matrix is dense and can be challenging to interpret in detail. The key insight lies in the overall density and distribution of strong correlations, which is visually apparent. To enhance clarity, all correlation values below the 0.9 threshold were set to zero and displayed as white cells, simplifying the visualization and highlighting only the most significant feature relationships.
+   </p>
+
+   <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/feature_correlation_matrix_(threshold_magnitude_of_0.9)_for_pre-fold_1.png') }}"
+        alt="Feature Correlation Matrix"
+        style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+   <p>
+    It is evident that most correlations cluster near the diagonal, indicating strong relationships among closely related features – such as FTA_BIAS and FTM_AVG – which is expected. However, this approach also uncovered less obvious correlations (the ones not near the diagonal), such as between PTS_BIAS_OPP and FGM_MOM_OPP, highlighting interactions that might otherwise have been overlooked.
+   </p>
+   <br>
+
+   <p>
+    After removing all redundant features, 87 remain. This reduction is reflected visually in the much sparser correlation matrix below. Notice that aside from the trivial diagonal (highlighted in red), which represents the perfect self-correlation of each feature, no correlations exceed the 0.9 threshold (indicated by blue). This confirms the effective elimination of highly correlated, redundant features.
+   </p>
+
+      <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/feature_correlation_matrix_(threshold_magnitude_of_0.9)_for_post-fold_1.png') }}"
+        alt="Feature Correlation Matrix"
+        style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+
+   <p>
+    By retaining only about 57% of the original features, we significantly reduce training and prediction times while maintaining most of the model’s predictive power. Additionally, the confusion matrix for fold 1 is presented below:
+   </p>
+
+         <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/fold_1_confusion_matrix.png') }}"
+        alt="Confusion Matrix"
+        style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+   <p>
+    As shown, there are 336 true positives – cases where the model correctly predicted a win (1) and the game outcome was indeed a win – along with 34 true negatives, 93 false positives, and 5 false negatives. From this confusion matrix, fold 1’s recall is 0.99, precision 0.78, F1 score 0.87, and accuracy 79.06%. While these results appear promising, they should be interpreted with caution since fold 1 was evaluated on a relatively small test set, making the metrics susceptible to volatility. This limitation motivated backtesting on a larger dataset, such as the remaining games not trained on in the 2024-25 NCAA season, to gain more knowingly stable estimates. Despite this, fold 1’s performance remains a useful indicator of training behavior and results. Across all eight folds, the average metrics were: recall at 0.86, precision 0.75, F1 score 0.80, and accuracy 72.49%, with an average optimal classification threshold of 0.4525 – below the standard threshold of 0.5.
+   </p>
+   <br>
+
+   <p>
+    As previously noted, we backtested our model using the last 25% of games in the 2024–25 NCAA season to gain a clearer understanding of its true predictive performance. The corresponding confusion matrix is shown below.
+   </p>
+
+            <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/2024-25_season_confusion_matrix.png') }}"
+        alt="Confusion Matrix"
+        style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+   <p>
+    As observed, the confusion matrix shows 696 true positives, 285 true negatives, 271 false positives, and 154 false negatives. This corresponds to a recall of 0.82, precision of 0.72, F1 score of 0.77, and accuracy of 69.77% (above the baseline accuracy of around 65% from just always predicting a home team win), which aligns closely with the metrics obtained during training. While our model is not without limitations, the results highlight the fundamental uncertainty and complexity involved in predicting basketball game outcomes within the context of sports betting.
+   </p>
+   <br>
+
+   <p>
+    Graphing recall, precision, F1, and accuracy for each game day over time, we see the following.
+   </p>
+
+       <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/ncaa_2024-25_deterministic_recall_trend_line.png') }}"
+        alt="Recall trendline graph"
+        style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+          <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/ncaa_2024-25_deterministic_precision_trend_line.png') }}"
+        alt="Precision trendline graph"
+        style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+          <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/ncaa_2024-25_deterministic_f1_trend_line.png') }}"
+        alt="F1 trendline graph"
+        style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+          <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/ncaa_2024-25_deterministic_accuracy_trend_line.png') }}"
+        alt="Accuracy trendline graph"
+        style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+   <p>
+    The red trendline across all four graphs demonstrates a modest upward trajectory, indicating a gradual improvement in model performance as the season advances. Notably, the recall metric consistently outperforms the other three metrics, reflecting the successful fulfillment of our training objective to prioritize and stabilize recall.
+   </p>
+   <br>
+
+   <h1 id="simulation">Simulation Version of Models</h1>
+
+   <br>
+   <p>
+   The previous two models presented and explained were the deterministic versions of said models -- that is, there was no randomness added to the inputs to the models. To simulate input variability (in order to best capture things like a team having an off day on the court), a simulation version of each model type (NBA and NCAA) was created.
+   </p>
+   <br>
+
+   <p>
+   For each prediction needed, 1,000 synthetic games were generated by perturbing each feature in the original dataset with independent noise drawn from a standard normal distribution. The noise for each feature was scaled by 0.5 times the empirical standard deviation of that feature, with a mean of zero. This approach preserves the relative dispersion observed in the data while introducing controlled randomness.
+   </p>
+   <br>
+
+   <p>
+    To ensure logical consistency in the simulated inputs, post-processing steps were applied. If any feature values fell outside plausible bounds—such as negative values for statistics that cannot be negative (e.g., maximum points), or averages exceeding known maximums—they were corrected. Depending on the context, this was achieved either by clipping extreme values using a modified hyperbolic tangent function or by adjusting dependent features (e.g., ensuring the mean did not exceed the maximum) by introducing a small corrective delta.
+
+   </p>
+   <br>
+
+   <p>
+    Each of these 1,000 perturbed inputs was then passed through the appropriate type of model (be it NBA or NCAA), which output a binary prediction — 1 indicating a home team win, and 0 indicating a loss — for each simulated game.
+   </p>
+   <br>
+
+   <p>
+    The proportion of the synthetic games in which the model predicted a home team win (i.e., output of 1) was interpreted as the model’s confidence — expressed as a probability — in the home team winning. Consequently, the away team’s win probability was computed as one minus this value.
+   </p>
+   <br>
+
+   <p>
+    To determine the final outcome of each simulation, a decision threshold was applied. This threshold was dynamically set based on the user-specified minimum accuracy requirement. If the model’s estimated home win probability met or exceeded this threshold, the home team was predicted to win the simulated game; otherwise, the prediction favored the away team.
+   </p>
+   <br>
+
+   <p>
+    The simulation model allows users to specify a desired minimum accuracy level — 60%, 70%, 80%, 90%, or 100% — with respect to predicting home team victories. This thresholding mechanism is particularly effective for users seeking greater confidence in model-backed decisions, such as betting exclusively on home wins.
+   </p>
+   <br>
+
+   <p>
+    The accuracy is computed as the proportion of correctly predicted home wins, conditional on the model having predicted a home win. That is:
+   </p>
+   <br>
+
+   <p style="width: 50%; margin: 0 auto; text-align: center;">
+    \( Accuracy = \frac{Correct Home Win Predictions}{Total Home Win Predictions Made} \)
+   </p>
+   <br>
+
+   <p>
+    For example, if a user selects a minimum accuracy of 80%, the model will classify a game as a home win only if its predicted probability exceeds a threshold calibrated to ensure that such predictions are correct at least 80% of the time. In practice, this means that if one were to place a bet on only those games where the model predicts a home win, the expected win rate of those bets would be approximately 80%. This approach directly aligns model output with user-defined risk tolerance.
+   </p>
+   <br>
+
+   <p>
+    The threshold corresponding to each accuracy level was empirically determined by analyzing model predictions on historical NBA data. Because the model is well-calibrated, higher predicted confidence levels correlate with higher actual win rates. As a result, increasing the minimum accuracy requirement increases the threshold: the model becomes more selective, choosing to classify a game as a home win only when its internal confidence is sufficiently high.
+   </p>
+   <br>
+
+   <p>
+    For instance, a 60% minimum accuracy corresponds to a threshold of 32% predicted probability. That is, games for which the model assigns at least 32% confidence to the home team winning are, in fact, correct home win predictions at least 60% of the time. Notably, this subset accounts for approximately 80% of all games in the dataset (~1,360 of 1,700 games). Conversely, achieving 100% accuracy—where every model-predicted home win aligns with an actual home win—requires a threshold of approximately 92.9%. At that level of confidence, the model made home win predictions on a much smaller subset of games (around 1.51% of the total games), but was never wrong.
+   </p>
+   <br>
+
+   <p>
+    This threshold–accuracy tradeoff is further detailed on the How to Use page of our website. In essence, higher accuracies demands lead to stricter thresholds, reducing the number of predictions as home wins to bet on but increasing the reliability of each one. The table below summarizes the thresholds and the corresponding share of games that meet each criterion for the 2024-25 NBA season games.
+   </p>
+   <br>
+
+    <table class="styled-table">
+  <thead>
+    <tr>
+      <th>User-Requested Accuracy (URA)</th>
+     <th>Smallest Statisfactory Accuracy Above or Equal to URA</th>
+      <th>Corresponding Simulation Confidence Threshold (SCT)</th>
+     <th>Percentage of Games Above or Equal to SCT</th>
+      <th>Corresponding Number of Games (the Ones to Bet On)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>60%</td>
+      <td>60.03%</td>
+      <td>32.18%</td>
+      <td>80.58%</td>
+      <td>1,386</td>
+    </tr>
+    <tr>
+      <td>70%</td>
+      <td>70.06%</td>
+      <td>51.13%</td>
+      <td>51.45%</td>
+      <td>885</td>
+    </tr>
+    <tr>
+     <td>80%</td>
+      <td>80.00%</td>
+      <td>72.66%</td>
+      <td>26.74%</td>
+      <td>460</td>
+    </tr>
+      <tr>
+     <td>90%</td>
+      <td>90.37%</td>
+      <td>86.77%</td>
+      <td>7.85%</td>
+      <td>135</td>
+    </tr>
+      <tr>
+     <td>100%</td>
+      <td>100.00%</td>
+      <td>92.91%</td>
+      <td>1.51%</td>
+      <td>26</td>
+    </tr>
+  </tbody>
+</table>
+
+   <br>
+   <p>
+    The same table but for the last 25% of NCAA 2024-25 season games is presented below.
+   </p>
+   <br>
+
+   <table class="styled-table">
+  <thead>
+    <tr>
+      <th>User-Requested Accuracy (URA)</th>
+     <th>Smallest Statisfactory Accuracy Above or Equal to URA</th>
+      <th>Corresponding Simulation Confidence Threshold (SCT)</th>
+     <th>Percentage of Games Above or Equal to SCT</th>
+      <th>Corresponding Number of Games (the Ones to Bet On)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>60%</td>
+      <td>60.46%</td>
+      <td>0.00%</td>
+      <td>100.00%</td>
+      <td>1,406</td>
+    </tr>
+    <tr>
+      <td>70%</td>
+      <td>70.02%</td>
+      <td>25.53%</td>
+      <td>74.25%</td>
+      <td>1,044</td>
+    </tr>
+    <tr>
+     <td>80%</td>
+      <td>80.08%</td>
+      <td>38.55%</td>
+      <td>37.13%</td>
+      <td>522</td>
+    </tr>
+      <tr>
+     <td>90%</td>
+      <td>90.38%</td>
+      <td>53.20%</td>
+      <td>11.10%</td>
+      <td>156</td>
+    </tr>
+      <tr>
+     <td>100%</td>
+      <td>100.00%</td>
+      <td>78.98%</td>
+      <td>0.21%</td>
+      <td>3</td>
+    </tr>
+  </tbody>
+</table>
+   <br>
+   <p>
+    Note that the simulation confidence thresholds in the NCAA table are consistently lower than those observed in the NBA table for each specified accuracy level. This discrepancy arises from the differing base rates of home team victories: during the 2024–25 season, NCAA home teams won approximately 65% of their games, whereas NBA home teams won at a lower rate of roughly 55%. As a result, the model requires less evidence (i.e., a lower probability threshold) to classify an NCAA home team as likely to win while still meeting the same accuracy constraints.   </p>
+   <br>
+
+    <h1 id="appendix">Appendix</h1>
+   <br>
+    <p>
+     All curated images related to the machine learning models, including those previously shown, will be compiled and presented here.
+    </p>
     <br>
 
-    <img src="{{ url_for('static', filename='ml_imgs/2024-25_season_confusion_matrix.png') }}"
+   <h2 id="nba_appendix">
+    NBA Model
+   </h2>
+   <p>
+    Metrics from the deterministic NBA model tested on the 2024-25 NBA basketball season.
+   </p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/2024-25_season_confusion_matrix.png') }}"
     alt="Feature Confusion Matrix"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
       
-    <img src="{{ url_for('static', filename='ml_imgs/2024-25_recall_trend_line.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/2024-25_recall_trend_line.png') }}"
     alt="Recall Trendline"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
 
-    <img src="{{ url_for('static', filename='ml_imgs/2024-25_precision_trend_line.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/2024-25_precision_trend_line.png') }}"
     alt="Precision Trendline"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
 
-    <img src="{{ url_for('static', filename='ml_imgs/2024-25_f1_trend_line.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/2024-25_f1_trend_line.png') }}"
     alt="F1 Trendline"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
 
-    <img src="{{ url_for('static', filename='ml_imgs/2024-25_accuracy_trend_line.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/2024-25_accuracy_trend_line.png') }}"
     alt="Accuracy Trendline"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
 
-    <p>Metrics from the training process for each of the 10 folds for the ML model. 
+    <p>
+     Metrics from the training process for each of the ten folds for the NBA model.
     </p>
-
     <br>
-    <p>Fold 1:</p>
+
+    <h4>Fold 1</h4>
     <br>
     <p>Correlation matrix before feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 1.png') }}"
+
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 1.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
     <p>Correlation matrix after feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 1.png') }}"
+
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 1.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
-    <p>Confusion Matrix</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/fold_1_confusion_matrix.png') }}"
+    <p>Confusion matrix:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/fold_1_confusion_matrix.png') }}"
     alt="Feature Confusion Matrix"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
 
-    <p>Fold 2:</p>
+    <h4>Fold 2</h4>
     <br>
     <p>Correlation matrix before feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 2.png') }}"
+
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 2.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
     <p>Correlation matrix after feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 2.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 2.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
-    <p>Confusion Matrix</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/fold_2_confusion_matrix.png') }}"
+    <p>Confusion matrix:</p>
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/fold_2_confusion_matrix.png') }}"
     alt="Feature Confusion Matrix"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
 
-    <p>Fold 3:</p>
+    <h4>Fold 3</h4>
     <br>
     <p>Correlation matrix before feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 3.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 3.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
     <p>Correlation matrix after feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 3.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 3.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
-    <p>Confusion Matrix</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/fold_3_confusion_matrix.png') }}"
+    <p>Confusion matrix:</p>
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/fold_3_confusion_matrix.png') }}"
     alt="Feature Confusion Matrix"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
 
-    <p>Fold 4:</p>
+    <h4>Fold 4</h4>
     <br>
     <p>Correlation matrix before feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 4.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 4.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
     <p>Correlation matrix after feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 4.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 4.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
-    <p>Confusion Matrix</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/fold_4_confusion_matrix.png') }}"
+    <p>Confusion matrix:</p>
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/fold_4_confusion_matrix.png') }}"
     alt="Feature Confusion Matrix"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
 
-    <p>Fold 5:</p>
+    <h4>Fold 5</h4>
     <br>
     <p>Correlation matrix before feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 5.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 5.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
     <p>Correlation matrix after feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 5.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 5.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
-    <p>Confusion Matrix</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/fold_5_confusion_matrix.png') }}"
+    <p>Confusion matrix:</p>
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/fold_5_confusion_matrix.png') }}"
     alt="Feature Confusion Matrix"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
 
-    <p>Fold 6:</p>
+    <h4>Fold 6</h4>
     <br>
     <p>Correlation matrix before feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 6.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 6.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
     <p>Correlation matrix after feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 6.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 6.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
-    <p>Confusion Matrix</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/fold_6_confusion_matrix.png') }}"
+    <p>Confusion matrix:</p>
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/fold_6_confusion_matrix.png') }}"
     alt="Feature Confusion Matrix"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
 
-    <p>Fold 7:</p>
+    <h4>Fold 7</h4>
     <br>
     <p>Correlation matrix before feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 7.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 7.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
     <p>Correlation matrix after feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 7.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 7.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
-    <p>Confusion Matrix</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/fold_7_confusion_matrix.png') }}"
+    <p>Confusion matrix:</p>
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/fold_7_confusion_matrix.png') }}"
     alt="Feature Confusion Matrix"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
 
-    <p>Fold 8:</p>
+    <h4>Fold 8</h4>
     <br>
     <p>Correlation matrix before feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 8.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 8.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
     <p>Correlation matrix after feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 8.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 8.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
-    <p>Confusion Matrix</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/fold_8_confusion_matrix.png') }}"
+    <p>Confusion matrix:</p>
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/fold_8_confusion_matrix.png') }}"
     alt="Feature Confusion Matrix"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
 
-    <p>Fold 9:</p>
+    <h4>Fold 9</h4>
     <br>
     <p>Correlation matrix before feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 9.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 9.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
     <p>Correlation matrix after feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 9.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 9.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
-    <p>Confusion Matrix</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/fold_9_confusion_matrix.png') }}"
+    <p>Confusion matrix:</p>
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/fold_9_confusion_matrix.png') }}"
     alt="Feature Confusion Matrix"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
 
-    <p>Fold 10:</p>
+    <h4>Fold 10</h4>
     <br>
     <p>Correlation matrix before feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 10.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Pre-Fold 10.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
     <p>Correlation matrix after feature selection/reduction:</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 10.png') }}"
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/Feature Correlation Matrix (Threshold Magnitude of 0.7) for Post-Fold 10.png') }}"
     alt="Feature Correlation Matrix"
     style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
     <br>
-    <p>Confusion Matrix</p>
-    <br>
-    <img src="{{ url_for('static', filename='ml_imgs/fold_10_confusion_matrix.png') }}"
+    <p>Confusion matrix:</p>
+    <img src="{{ url_for('static', filename='ml_imgs/nba_model/fold_10_confusion_matrix.png') }}"
     alt="Feature Confusion Matrix"
     style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
 
+   <br>
+   <h2 id="ncaa_appendix">
+    NCAA Model
+   </h2>
+   <p>
+    Metrics from the deterministic NCAA model tested on the last 25% of games of the 2024-25 NCAA basketball season.
+   </p>
+   <br>
 
+       <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/2024-25_season_confusion_matrix.png') }}"
+    alt="Feature Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/ncaa_2024-25_deterministic_recall_trend_line.png') }}"
+    alt="Recall Trendline"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/ncaa_2024-25_deterministic_precision_trend_line.png') }}"
+    alt="Precision Trendline"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/ncaa_2024-25_deterministic_f1_trend_line.png') }}"
+    alt="F1 Trendline"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/ncaa_2024-25_deterministic_accuracy_trend_line.png') }}"
+    alt="Accuracy Trendline"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+    <p>
+     Metrics from the training process for each of the eight folds for the NCAA model.
+    </p>
+    <br>
+
+   <h4>Fold 1</h4>
+    <br>
+    <p>Correlation matrix before feature selection/reduction:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/feature_correlation_matrix_(threshold_magnitude_of_0.9)_for_pre-fold_1.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Correlation matrix after feature selection/reduction:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/feature_correlation_matrix_(threshold_magnitude_of_0.9)_for_post-fold_1.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Confusion matrix:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/fold_1_confusion_matrix.png') }}"
+    alt="Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+     <h4>Fold 2</h4>
+    <br>
+    <p>Correlation matrix before feature selection/reduction:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/feature_correlation_matrix_(threshold_magnitude_of_0.9)_for_pre-fold_2.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Correlation matrix after feature selection/reduction:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/feature_correlation_matrix_(threshold_magnitude_of_0.9)_for_post-fold_2.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Confusion matrix:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/fold_2_confusion_matrix.png') }}"
+    alt="Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+   <h4>Fold 3</h4>
+    <br>
+    <p>Correlation matrix before feature selection/reduction:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/feature_correlation_matrix_(threshold_magnitude_of_0.9)_for_pre-fold_3.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Correlation matrix after feature selection/reduction:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/feature_correlation_matrix_(threshold_magnitude_of_0.9)_for_post-fold_3.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Confusion matrix:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/fold_3_confusion_matrix.png') }}"
+    alt="Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+   <h4>Fold 4</h4>
+    <br>
+    <p>Correlation matrix before feature selection/reduction:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/feature_correlation_matrix_(threshold_magnitude_of_0.9)_for_pre-fold_4.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Correlation matrix after feature selection/reduction:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/feature_correlation_matrix_(threshold_magnitude_of_0.9)_for_post-fold_4.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Confusion matrix:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/fold_4_confusion_matrix.png') }}"
+    alt="Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+   <h4>Fold 5</h4>
+    <br>
+    <p>Correlation matrix before feature selection/reduction:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/feature_correlation_matrix_(threshold_magnitude_of_0.9)_for_pre-fold_5.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Correlation matrix after feature selection/reduction:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/feature_correlation_matrix_(threshold_magnitude_of_0.9)_for_post-fold_5.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Confusion matrix:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/fold_5_confusion_matrix.png') }}"
+    alt="Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+   <h4>Fold 6</h4>
+    <br>
+    <p>Correlation matrix before feature selection/reduction:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/feature_correlation_matrix_(threshold_magnitude_of_0.9)_for_pre-fold_6.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Correlation matrix after feature selection/reduction:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/feature_correlation_matrix_(threshold_magnitude_of_0.9)_for_post-fold_6.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Confusion matrix:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/fold_6_confusion_matrix.png') }}"
+    alt="Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+   <h4>Fold 7</h4>
+    <br>
+    <p>Correlation matrix before feature selection/reduction:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/feature_correlation_matrix_(threshold_magnitude_of_0.9)_for_pre-fold_7.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Correlation matrix after feature selection/reduction:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/feature_correlation_matrix_(threshold_magnitude_of_0.9)_for_post-fold_7.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Confusion matrix:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/fold_7_confusion_matrix.png') }}"
+    alt="Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+
+   <h4>Fold 8</h4>
+    <br>
+    <p>Correlation matrix before feature selection/reduction:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/feature_correlation_matrix_(threshold_magnitude_of_0.9)_for_pre-fold_8.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Correlation matrix after feature selection/reduction:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/feature_correlation_matrix_(threshold_magnitude_of_0.9)_for_post-fold_8.png') }}"
+    alt="Feature Correlation Matrix"
+    style="width: auto; height: 500px; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
+    <br>
+    <p>Confusion matrix:</p>
+
+    <img src="{{ url_for('static', filename='ml_imgs/ncaa_model/fold_8_confusion_matrix.png') }}"
+    alt="Confusion Matrix"
+    style="width: auto; height: auto; object-fit: cover; border-radius: 8px; display: block; margin: 0 auto;">
 
   </div>
 {% endblock %}

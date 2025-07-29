@@ -15,14 +15,15 @@ import joblib
 
 
 def pred_historic_model_old_outcomes_pipeline(
-    version, league, season_year, user_min_acc, target_team_ids=None,
-    target_game_date=None, training_and_testing=False
+    version, league, season_year, user_min_acc=60, target_team_ids=None,
+    target_game_dates=None, target_game_ids=None, training_and_testing=False
 ):
     df = get_game_stats_data_df(
         league,
         season_year,
         target_team_ids=target_team_ids,
-        target_game_date=target_game_date,
+        target_game_dates=target_game_dates,
+        target_game_ids=target_game_ids,
         training_and_testing=training_and_testing,
     )
 
@@ -50,7 +51,7 @@ def pred_historic_model_old_outcomes_pipeline(
                 sim_pred, sim_prob, CI in zip(
                     home_ids, game_dates, y, det_preds, det_probs, sim_preds,
                     sim_probs, CIs
-            )
+                )
             }
 
         det_acc = accuracy_score(y, det_preds)
@@ -79,6 +80,9 @@ def pred_historic_model_old_outcomes_pipeline(
             verbose=False,
             get_conf_matrix_img=False
         )
+        if det_preds is None:
+            return (None,) * 7
+
         outcomes_preds = {
             f"{game_date}:{home_id}": (true_label, det_pred, det_prob) for
             home_id, game_date, true_label, det_pred, det_prob,
@@ -143,28 +147,35 @@ def pred_historic_model_old_outcomes_pipeline(
         )
 
 
-def trend_line_graph(plot_data, plot_type, season_year):
+def trend_line_graph(plot_data, plot_type, league, season_year, version):
     x = range(len(plot_data))
     y = plot_data
     plt.scatter(x, y, label="Data Points")
     m, b = np.polyfit(x, y, 1)
     plt.plot(x, m * x + b, color="red", label="Trend Line")
     plt.title(f'{plot_type} Trend Over Time ({season_year} Season)')
-    plt.xlabel('Game Days Since First Game')
+    plt.xlabel('Game Days Since First Game Tested')
     plt.ylabel(plot_type)
     plt.legend()
     plt.grid(True)
-    plt.savefig(f'ml_imgs/{season_year}_{plot_type.lower()}_trend_line.png')
+    plt.savefig(f'backend/models/ml_imgs/{league}_model/{season_year}'
+                f'_{version}_{plot_type.lower()}_trend_line.png'
+                )
     plt.show()
 
 
 def eval_model_preds_over_time(version, league, season_year):
     df = pd.read_sql_table(
         f"{league}_game_stats_{season_year}",
-        f"sqlite:///../database/{league}_game_stats.db"
+        f"sqlite:///backend/database/{league}_game_stats.db"
         )
-    df = df[df['SEASON_ID'] == f'2{season_year[:season_year.index("-")]}']
+    print(len(df))
+    if league == "nba":
+        df = df[df['SEASON_ID'] == f'2{season_year[:season_year.index("-")]}']
     df.sort_values('GAME_DATE', inplace=True)
+    if league == "ncaa":
+        df = df[(3 * len(df) // 4):]
+    print(len(df))
     game_dates = df['GAME_DATE'].unique()
     accs = []
     recalls = []
@@ -177,7 +188,7 @@ def eval_model_preds_over_time(version, league, season_year):
         (outcomes_preds, final_acc, final_recall, final_precision,
          final_f1, final_cm, extra_metrics) =\
             pred_historic_model_old_outcomes_pipeline(
-            version, league, season_year, target_game_date=game_date,
+            version, league, season_year, 60, target_game_dates=game_date,
             training_and_testing=True
         )
 
@@ -190,15 +201,16 @@ def eval_model_preds_over_time(version, league, season_year):
             f1.append(final_f1)
             print(game_date)
 
-    trend_line_graph(accs, "Accuracy", season_year)
-    trend_line_graph(recalls, "Recall", season_year)
-    trend_line_graph(precision, "Precision", season_year)
-    trend_line_graph(f1, "F1", season_year)
+    trend_line_graph(accs, "Accuracy", league, season_year, version)
+    trend_line_graph(recalls, "Recall", league, season_year, version)
+    trend_line_graph(precision, "Precision", league, season_year, version)
+    trend_line_graph(f1, "F1", league, season_year, version)
 
 
 if __name__ == '__main__':
-    test_nba_pred_old_outcomes_pipeline = True
-    test_ncaa_pred_old_outcomes_pipeline = True
+    test_nba_pred_old_outcomes_pipeline = False
+    test_range_preds = True
+    test_ncaa_pred_old_outcomes_pipeline = False
     do_eval_model_over_time = False
 
     def print_results(
@@ -231,8 +243,73 @@ if __name__ == '__main__':
                     1610612760, 1610612746, 1610612750, 1610612738,
                     1610612749, 1610612751, 1610612748, 1610612754
                 ],
-                target_game_date="2025-01-02",
+                target_game_dates="2025-01-02",
                 training_and_testing=True
+            )
+        )
+        print_results(
+            outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics
+        )
+    if test_range_preds:
+        version = "deterministic"
+        league = "nba"
+        season_year = "2024-25"
+        outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = (
+            pred_historic_model_old_outcomes_pipeline(
+                version, league, season_year,
+                target_team_ids=[1610612760, 1610612737],
+                target_game_dates=["2024-10-17"],
+                target_game_ids=['0012400064'],
+                training_and_testing=False
+            )
+        )
+        print_results(
+            outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics
+        )
+        outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = (
+            pred_historic_model_old_outcomes_pipeline(
+                version, league, season_year,
+                target_team_ids=[1610612751, 1610612737],
+                target_game_dates=["2024-10-23"],
+                target_game_ids=['0022400064'],
+                training_and_testing=False
+            )
+        )
+        print_results(
+            outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics
+        )
+        outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = (
+            pred_historic_model_old_outcomes_pipeline(
+                version, league, season_year,
+                target_team_ids=[1610612766, 1610612745],
+                target_game_dates=["2024-10-23"],
+                target_game_ids=['0022400068'],
+                training_and_testing=False
+            )
+        )
+        print_results(
+            outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics
+        )
+        outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = (
+            pred_historic_model_old_outcomes_pipeline(
+                version, league, season_year,
+                target_team_ids=[1610612766, 1610612737],
+                target_game_dates=["2024-10-25"],
+                target_game_ids=['0022400079'],
+                training_and_testing=False
+            )
+        )
+        print_results(
+            outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics
+        )
+        outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = (
+            pred_historic_model_old_outcomes_pipeline(
+                version, league, season_year,
+                target_team_ids=[1610612766, 1610612737, 1610612751,
+                                 1610612760, 1610612766, 1610612745],
+                target_game_dates=["2024-10-17", "2024-10-23", "2024-10-25"],
+                target_game_ids=['0012400064', '0022400064', '0022400079', '0022400068'],
+                training_and_testing=False
             )
         )
         print_results(
@@ -511,7 +588,7 @@ if __name__ == '__main__':
                     "1394dd8a-040e-4509-9ee3-761d60eaf6c9",
                     "5873529e-e5e3-4a06-8a03-fa4cbe509880"
                 ],
-                target_game_date="2025-02-01",
+                target_game_dates="2025-02-01",
                 training_and_testing=True
             )
         )
@@ -521,6 +598,6 @@ if __name__ == '__main__':
 
     if do_eval_model_over_time:
         version = "deterministic"
-        league = "nba"
+        league = "ncaa"
         season_year = "2024-25"
         eval_model_preds_over_time(version, league, season_year)
