@@ -524,7 +524,7 @@ def get_predictions_range():
     return jsonify({'games': predictions,
                     'confusion_matrix': cms.tolist(),
                     'season': season[-7:],
-                    'stats': {'final_acc': round(accs*100,2), 'final_recall': round(recalls*100,2), 'final_precision': round(precisions*100,2), 'final_f1': round(f1s,2)} # Note needs to be filled with real values. Waiting for Gabriel in case of interface changes
+                    'stats': {'final_acc': round(accs*100,2), 'final_recall': round(recalls*100,2), 'final_precision': round(precisions*100,2), 'final_f1': round(f1s,2)}
                     })
 
 
@@ -585,10 +585,7 @@ def test():
 
     outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = result
     for date in selected_games:
-        sum_cm[0][0] += int(cms[0][0])
-        sum_cm[0][1] += int(cms[0][1])
-        sum_cm[1][0] += int(cms[1][0])
-        sum_cm[1][1] += int(cms[1][1])
+        
             
         predictions[date] = []
             
@@ -603,13 +600,14 @@ def test():
             data = [prediction, actual_winner]
             if selected_model == 'simulation':
                 data.append(outcomes[2])
+                data.append(outcomes[-1])
 
             predictions[date].append(data)
 
     return jsonify({'games': predictions,
-                    'confusion_matrix': sum_cm,
+                    'confusion_matrix': cms.tolist(),
                     'season': season[-7:],
-                    'stats': {'final_acc': 0, 'final_recall': 0, 'final_precision': 0, 'final_f1': 0} # Note needs to be filled with real values. Waiting for Gabriel in case of interface changes
+                    'stats': {'final_acc': round(accs*100,2), 'final_recall': round(recalls*100,2), 'final_precision': round(precisions*100,2), 'final_f1': round(f1s,2)}
                     })
 
 
@@ -780,7 +778,7 @@ def get_plot():
 
 if __name__ == '__main__':
 
-    debug = False
+    debug = True
     if debug:
         app.run(debug=True)
     else:

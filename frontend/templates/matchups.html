@@ -313,7 +313,6 @@
       const thead = document.createElement('thead');
       let newHTML = `
         <tr style="background-color: #1D428A; color: white;">
-          <th style="padding: 12px; border: 1px solid #ddd;"><input type="checkbox" id="checkAll${date}"></th>
           <th style="padding: 12px; border: 1px solid #ddd;">Home</th>
           <th style="padding: 12px; border: 1px solid #ddd;">Home W–L</th>
           <th style="padding: 12px; border: 1px solid #ddd;">Away</th>
@@ -347,7 +346,6 @@
         row.setAttribute('draggable', true);
 
         newHTML = `
-          <td style="padding: 12px; border: 1px solid #ddd;"><input type="checkbox" class="row-checkbox${date}"></td>
           <td id="${game.home_id}" style="padding: 12px; border: 1px solid #ddd;">${game.home}</td>
           <td style="padding: 12px; border: 1px solid #ddd;">${game.home_record}</td>
           <td id="${game.away_id}" style="padding: 12px; border: 1px solid #ddd;">${game.away}</td>
@@ -373,11 +371,6 @@
         row.innerHTML = newHTML;
         tbody.appendChild(row);
 
-        row.addEventListener('dragstart', (e) => {
-          e.dataTransfer.setData('text/plain', row.id); // transfer the row ID
-          e.dataTransfer.effectAllowed = 'move';
-        });
-
         total_games++;
       });
       
@@ -385,22 +378,6 @@
       table.appendChild(tbody);
       container.append(table);
       
-
-      document.getElementById(`checkAll${date}`).addEventListener('change', function () {
-        const checkboxes = document.querySelectorAll(`.row-checkbox${date}`);
-        checkboxes.forEach(cb => {
-          console.log(this.checked, cb.checked);
-          if (cb.checked != this.checked) {
-            cb.checked = this.checked;
-            cb.dispatchEvent(new Event('change'));
-          }            
-        });
-        
-      });
-
-      document.querySelectorAll(`.row-checkbox${date}`).forEach(box => {
-        box.addEventListener('change', () => updateSelectedCounter(box.checked));
-      });
 
     }
   }
@@ -684,6 +661,7 @@ let [tableData, selectedGames, gameIds] = getGameTableInfo();
           tableData[date][i]['winner'] = game[1];
           if (model == 'simulation') {
             tableData[date][i]['confidence'] = game[2];
+            tableData[date][i]['confidence_interval'] = game[3];
           }
           i++;
         });
