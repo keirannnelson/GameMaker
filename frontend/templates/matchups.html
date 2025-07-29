@@ -243,7 +243,8 @@
         type="date" 
         name="game_date" 
         id="date-select" 
-        required 
+        value = '2024-10-22'
+        required
         style="flex-grow: 1; padding: 10px; font-size: 1em; border: 1px solid #ccc; border-radius: 4px; max-width: 200px;"
       >
       <label for="model-select" style="font-weight: 600;align-content: center;">Select Prediction Method</label>
@@ -292,6 +293,118 @@
 
 
 <script>
+  function renderGameTable(data, prediction='None') {
+    let total_games = 0;
+    const container = document.getElementById('games-table-container')
+    container.innerHTML = '';
+    for (const [date, games] of Object.entries(data.games)) {
+      const heading = document.createElement('h3');
+      heading.textContent = `Games on ${date}`;
+      heading.style.cssText = "margin-top: 20px; font-weight: 600; text-align: center;";
+      container.appendChild(heading);
+
+
+      const table = document.createElement('table');
+      table.id = `table-${date}`
+      table.className = 'game-table'
+      table.style.cssText = "width: 100%; border-collapse: collapse; font-family: 'Montserrat', sans-serif; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px;";
+
+
+      const thead = document.createElement('thead');
+      let newHTML = `
+        <tr style="background-color: #1D428A; color: white;">
+          <th style="padding: 12px; border: 1px solid #ddd;"><input type="checkbox" id="checkAll${date}"></th>
+          <th style="padding: 12px; border: 1px solid #ddd;">Home</th>
+          <th style="padding: 12px; border: 1px solid #ddd;">Home W–L</th>
+          <th style="padding: 12px; border: 1px solid #ddd;">Away</th>
+          <th style="padding: 12px; border: 1px solid #ddd;">Away W–L</th>
+      `;
+      if (prediction != 'None') {
+        newHTML += `
+            <th style="padding: 12px; border: 1px solid #ddd;">Prediction</th>
+            <th style="padding: 12px; border: 1px solid #ddd;">Winner</th>
+        `;
+      }
+      if (prediction == 'simulation') {
+        newHTML += `
+            <th style="padding: 12px; border: 1px solid #ddd;">Confidence %</th>
+            <th style="padding: 12px; border: 1px solid #ddd;">Confidence Interval</th>
+        `;
+      }
+
+      newHTML += `</tr>`;
+
+
+      thead.innerHTML = newHTML;
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+
+      games.forEach(game => {
+        const row = document.createElement('tr');
+        row.id = game.id
+        row.style.backgroundColor = '#f9f9f9';
+        row.setAttribute('draggable', true);
+
+        newHTML = `
+          <td style="padding: 12px; border: 1px solid #ddd;"><input type="checkbox" class="row-checkbox${date}"></td>
+          <td id="${game.home_id}" style="padding: 12px; border: 1px solid #ddd;">${game.home}</td>
+          <td style="padding: 12px; border: 1px solid #ddd;">${game.home_record}</td>
+          <td id="${game.away_id}" style="padding: 12px; border: 1px solid #ddd;">${game.away}</td>
+          <td style="padding: 12px; border: 1px solid #ddd;">${game.away_record}</td>
+        `;
+        if (prediction != "None") {
+          let background_color = game.prediction === game.winner? '#00FF52' : '#fc0511';
+          if (game.prediction == "Undefined") {
+            background_color = '#FFFF00';
+          }
+          newHTML += `
+            <td style="padding: 12px; border: 1px solid #ddd; background-color: ${background_color};">${game.prediction}</td>
+            <td style="padding: 12px; border: 1px solid #ddd; background-color: ${background_color};">${game.winner}</td>
+          `;
+        }
+        if (prediction == 'simulation') {
+          newHTML += `
+                      <td style="padding: 12px; border: 1px solid #ddd;">${game.confidence}</td>
+                      <td style="padding: 12px; border: 1px solid #ddd;">${game.confidence_interval[0]}% - ${game.confidence_interval[1]}%</td>
+          `;
+        }
+
+        row.innerHTML = newHTML;
+        tbody.appendChild(row);
+
+        row.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', row.id); // transfer the row ID
+          e.dataTransfer.effectAllowed = 'move';
+        });
+
+        total_games++;
+      });
+      
+
+      table.appendChild(tbody);
+      container.append(table);
+      
+
+      document.getElementById(`checkAll${date}`).addEventListener('change', function () {
+        const checkboxes = document.querySelectorAll(`.row-checkbox${date}`);
+        checkboxes.forEach(cb => {
+          console.log(this.checked, cb.checked);
+          if (cb.checked != this.checked) {
+            cb.checked = this.checked;
+            cb.dispatchEvent(new Event('change'));
+          }            
+        });
+        
+      });
+
+      document.querySelectorAll(`.row-checkbox${date}`).forEach(box => {
+        box.addEventListener('change', () => updateSelectedCounter(box.checked));
+      });
+
+    }
+  }
+
   let draggedTeam;
 
  
@@ -372,12 +485,13 @@
       alert("Please select a date.");
       return;
     }
-
+    
     fetch('/get_matchups', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
+      
       body: JSON.stringify({
   selected_date: date,
   team1: team1,
@@ -450,30 +564,36 @@
   };
 
   function getGameTableInfo() {
-      const table = document.getElementById("games-table");
+  const table = document.getElementById("games-table");
   const tableData = {};
   const selectedGames = {};
+
 
   if (!table) {
     console.warn("No table found.");
     return [tableData, selectedGames];
   }
 
-  const date = document.getElementById("date-select").value;
   const rows = table.querySelectorAll('tbody tr');
-
-  tableData[date] = [];
-  selectedGames[date] = [];
 
   rows.forEach(row => {
     const cells = row.querySelectorAll('td');
     if (cells.length < 5) return;
 
-    selectedGames[date].push(parseInt(cells[1].id.replace(/\D/g, '')));
-    selectedGames[date].push(parseInt(cells[3].id.replace(/\D/g, '')));
+    
+    const rawDate = new Date(cells[0].textContent.trim());
+    rawDate.setDate(rawDate.getDate()+1);
+    const gameDate = rawDate.toISOString().slice(0, 10);
 
+    if (!selectedGames[gameDate]) selectedGames[gameDate] = [];
+    if (!tableData[gameDate]) tableData[gameDate] = [];
 
-    tableData[date].push({
+    const homeId = parseInt(cells[1].id.replace(/\D/g, ''));
+    const awayId = parseInt(cells[3].id.replace(/\D/g, ''));
+
+    selectedGames[gameDate].push(homeId, awayId);
+
+    tableData[gameDate].push({
       home: cells[1].textContent.trim(),
       home_record: cells[2].textContent.trim(),
       away: cells[3].textContent.trim(),
@@ -483,10 +603,10 @@
       id: row.id ? parseInt(row.id.replace(/\D/g, '')) : null
     });
   });
-
+  
   return [tableData, selectedGames];
-
 }
+
 
 
 
