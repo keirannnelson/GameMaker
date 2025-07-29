@@ -9,7 +9,6 @@ from flask import Flask, render_template, request, session, redirect, url_for, j
 import firebase_admin
 from firebase_admin import credentials, auth 
 from backend.models.pred_pipeline import pred_historic_model_old_outcomes_pipeline
-from sklearn.metrics import recall_score, precision_score, f1_score
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -470,66 +469,61 @@ def get_matchups():
 def get_predictions_range():
     data = request.get_json()
     selected_games = data.get('selected_games', [])
+    selected_teams = data.get('selected_teams')
     selected_league = data.get('selected_league')
     selected_model = data.get('selected_model')
     accuracy_threshold = data.get('accuracy_threshold')
-    print(accuracy_threshold)
 
-    if not selected_games:
+    if not selected_games or not selected_teams:
         return jsonify({'error': 'No games provided'}), 400
 
-    sum_cm = [[0,0],[0,0]]
+   
     predictions = {}
 
+    dates = [i for i in selected_games.keys()]
+    games = []
+    for i in selected_games.values():
+        games += i
 
-    for date in selected_games:
-        # if league is NBA cast id to int
+    teams = []
+    for i in selected_teams.values():
         if selected_league == 'NBA':
-            selected_games[date] = [int(team_id) for team_id in selected_games[date]] 
+            i = [int(j) for j in i]
+        teams += i
 
-        outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = pred_historic_model_old_outcomes_pipeline(
+    outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = pred_historic_model_old_outcomes_pipeline(
             selected_model, 
             LEAGUE_TO_MODEL_LEAGUE[selected_league], 
             '2024-25', 
             int(accuracy_threshold), 
-            target_team_ids=selected_games[date], 
-            target_game_date=date)
+            target_team_ids=teams, 
+            target_game_dates=dates,
+            target_game_ids=games)
+
+
+    predictions = {}
+    for key in outcomes_preds:
+        outcomes = outcomes_preds[key]
+        date, home = key.split(':')
+        if date not in predictions:
+            predictions[date] = []
+
+        actual_winner = 'Home' if outcomes[0] else 'Away'
+        prediction = 'Home' if outcomes[1] else 'Away'
+        data = [prediction, actual_winner]
+        if selected_model == 'simulation':
+            data.append(outcomes[2])
+            data.append(outcomes[-1])
+
+        predictions[date].append(data)
+
     
-        sum_cm[0][0] += int(cms[0][0])
-        sum_cm[0][1] += int(cms[0][1])
-        sum_cm[1][0] += int(cms[1][0])
-        sum_cm[1][1] += int(cms[1][1])
-        
-        predictions[date] = []
-        y_pred = []
-        y_true = []
-        for ids in selected_games[date][::2]:
-            outcomes = outcomes_preds.get(f'{date}:{ids}', None)
-            if not outcomes:
-                predictions[date].append(['Undefined', 'Undefined'])
-                continue
 
-            y_true.append(outcomes[0])
-            y_pred.append(outcomes[1])
-
-            actual_winner = 'Home' if outcomes[0] else 'Away'
-            prediction = 'Home' if outcomes[1] else 'Away'
-            data = [prediction, actual_winner]
-            if selected_model == 'simulation':
-                data.append(outcomes[2])
-                data.append(outcomes[-1])
-
-            predictions[date].append(data)
-
-        acc = round((sum_cm[0][0] + sum_cm[1][1]) / (sum_cm[0][0] + sum_cm[1][1] + sum_cm[0][1] + sum_cm[1][0]) * 100, 2)
-        recall = round(recall_score(y_true, y_pred) * 100, 2)
-        precision = round(precision_score(y_true, y_pred) * 100, 2)
-        f1 = round(f1_score(y_true, y_pred), 2)
 
     return jsonify({'games': predictions,
-                    'confusion_matrix': sum_cm,
+                    'confusion_matrix': cms.tolist(),
                     'season': season[-7:],
-                    'stats': {'final_acc': acc, 'final_recall': recall, 'final_precision': precision, 'final_f1': f1} # Note needs to be filled with real values. Waiting for Gabriel in case of interface changes
+                    'stats': {'final_acc': round(accs*100,2), 'final_recall': round(recalls*100,2), 'final_precision': round(precisions*100,2), 'final_f1': round(f1s,2)} # Note needs to be filled with real values. Waiting for Gabriel in case of interface changes
                     })
 
 
@@ -609,25 +603,26 @@ def test():
 def get_parlay():
     data = request.get_json()
     selected_date = data.get('selected_date')
-    selected_games = data.get('selected_games')
+    selected_teams = data.get('selected_teams')
     selected_league = data.get('selected_league')
-
+    selected_teams = data.get('selected_teams')
+    selected_games = data.get('selected_games')
 
     if selected_league == 'NBA':
-        selected_games = [int(i) for i in selected_games]
+        selected_teams = [int(i) for i in selected_teams]
 
     outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = pred_historic_model_old_outcomes_pipeline(
         'simulation', 
         LEAGUE_TO_MODEL_LEAGUE[selected_league], 
         '2024-25', 
         60, 
-        target_team_ids=selected_games, 
-        target_game_date=selected_date
-        )
+        target_team_ids=selected_teams, 
+        target_game_dates=[selected_date],
+        target_game_ids=selected_games)
     
     games = []
     prob = 1.0
-    for ids in selected_games[::2]:
+    for ids in selected_teams[::2]:
         outcomes = outcomes_preds.get(f'{selected_date}:{ids}', None)
         if not outcomes:
             games.append(['Undefined'])

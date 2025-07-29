@@ -214,6 +214,7 @@
         const row = document.createElement('tr');
         row.id = game.id
         row.style.backgroundColor = '#f9f9f9';
+        row.className = 'game-row';
         row.setAttribute('draggable', true);
 
         newHTML = `
@@ -282,11 +283,13 @@
     const gameTables = document.querySelectorAll('.game-table');
     tableData = {};
     selectedGames = {};
+    selectedTeams = {}
     gameTables.forEach(table => {
       const date = table.id.replace("table-", "");
       const checkedBoxes = document.querySelectorAll(`.row-checkbox${date}:checked`);
       if (checkedBoxes.length > 0) {
         selectedGames[date] = [];
+        selectedTeams[date] = [];
         tableData[date] = [];
       }
       
@@ -295,8 +298,9 @@
         const cells = row.querySelectorAll('td');
 
         // Push the home and away team IDs
-        selectedGames[date].push(cells[1].id);
-        selectedGames[date].push(cells[3].id);
+        selectedGames[date].push(row.id);
+        selectedTeams[date].push(cells[1].id);
+        selectedTeams[date].push(cells[3].id);
         
         tableData[date].push({
           'home': row.cells[1].textContent,
@@ -309,7 +313,7 @@
         });
       })
     });
-    return [tableData, selectedGames];
+    return [tableData, selectedTeams, selectedGames];
   }
 
   function retrieveGamesRange() {
@@ -412,8 +416,8 @@
       dates.push(d.toISOString().slice(0, 10));
     }
 
-    let [tableData, selectedGames] = getGameTableInfo();
-    if (Object.keys(selectedGames).length == 0) {
+    let [tableData, selectedTeams, selectedGames] = getGameTableInfo();
+    if (Object.keys(selectedTeams).length == 0) {
       predButton.textContent = "PREDICT";
       alert("No games selected");
       return;
@@ -425,7 +429,7 @@
     fetch('/get_predictions_range', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ selected_games: selectedGames, selected_league: league, selected_model: model, accuracy_threshold: accuracy })
+      body: JSON.stringify({ selected_games: selectedGames, selected_league: league, selected_model: model, accuracy_threshold: accuracy, selected_teams: selectedTeams })
     })
     .then(res => res.json())
     .then(data => {
@@ -558,10 +562,12 @@
 
     const date = parlayTable.dataset.date;
     const parlayRows = document.querySelectorAll('.parlay-table-row');
+    const teams = [];
     const games = [];
 
     parlayRows.forEach(row => {
-      games.push(row.cells[0].dataset.teamId, row.cells[1].dataset.teamId);
+      games.push(row.dataset.gameId);
+      teams.push(row.cells[0].dataset.teamId, row.cells[1].dataset.teamId);
     })
     
     const league = document.getElementById('league-select').value;
@@ -571,7 +577,7 @@
     fetch('/get_parlay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ selected_date: date, selected_games: games, selected_league: league})
+      body: JSON.stringify({ selected_date: date, selected_games: games, selected_league: league, selected_teams: teams})
     })
     .then(res => res.json())
     .then(data => {
