@@ -640,6 +640,7 @@ def get_parlay():
 
 @app.route('/get_db_table', methods=['POST'])
 def get_db_table():
+    
     data = request.get_json()
     selected_table = data.get('selected_table')
     league = 'NBA'
@@ -686,9 +687,6 @@ def get_db_table():
 
         conn.close()
         columns = ['PLAYER', 'TEAM', 'AGE', 'GP', 'GS', 'MIN', 'FGM', 'FGA', 'FG%', 'FG3M', 'FG3A', 'FG3%', 'FTM', 'FTA', 'FT%', 'OREB', 'DREB', 'REB', 'AST', 'STL', 'BLK', 'TOV', 'PF','PTS']
-        
-
-
 
         return jsonify({'teams_data': players_data, 'columns': columns})
 
@@ -767,7 +765,7 @@ def get_plot():
 
 if __name__ == '__main__':
 
-    debug = True
+    debug = False
     if debug:
         app.run(debug=True)
     else:
