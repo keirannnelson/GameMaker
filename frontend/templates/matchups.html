@@ -543,8 +543,8 @@
             <td id="${game.home_id}" style="padding: 12px; border: 1px solid #ddd;">${game.home}</td>
             <td style="padding: 12px; border: 1px solid #ddd;">${game.home_record}</td>
             <td id="${game.away_id}" style="padding: 12px; border: 1px solid #ddd;">${game.away}</td>
-          
-            <td style="padding: 12px; border: 1px solid #ddd;">${game.away_record}</td>
+            
+            <td id="${game.game_id}" style="padding: 12px; border: 1px solid #ddd;">${game.away_record}</td>
           </tr>
         `;
       });
@@ -567,6 +567,9 @@
   const table = document.getElementById("games-table");
   const tableData = {};
   const selectedGames = {};
+
+  //changed
+  const gameIds = [];
 
 
   if (!table) {
@@ -591,6 +594,12 @@
     const homeId = parseInt(cells[1].id.replace(/\D/g, ''));
     const awayId = parseInt(cells[3].id.replace(/\D/g, ''));
 
+    //changed
+    const gameId = row.cells[4].id; // 5th cell (index 4) holds game_id
+    console.log("hi");
+    console.log(row.cells[4].id);
+    gameIds.push(gameId); 
+
     selectedGames[gameDate].push(homeId, awayId);
 
     tableData[gameDate].push({
@@ -603,8 +612,9 @@
       id: row.id ? parseInt(row.id.replace(/\D/g, '')) : null
     });
   });
+  console.log("hi");
   
-  return [tableData, selectedGames];
+  return [tableData, selectedGames, gameIds];
 }
 
 
@@ -645,7 +655,7 @@ for (let i = 0; i < diffDays; i++) {
 }
 
 
-let [tableData, selectedGames] = getGameTableInfo();
+let [tableData, selectedGames, gameIds] = getGameTableInfo();
     if (Object.keys(selectedGames).length == 0) {
       predButton.textContent = "PREDICT";
       alert("No games selected");
@@ -656,7 +666,7 @@ let [tableData, selectedGames] = getGameTableInfo();
     fetch('/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ selected_games: selectedGames, selected_league: league, selected_model: model })
+      body: JSON.stringify({ selected_games: selectedGames, selected_league: league, selected_model: model, selected_gameIds:gameIds })
     })
     .then(res => res.json())
     .then(data => {

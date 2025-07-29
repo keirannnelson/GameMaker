@@ -429,7 +429,8 @@ def retrieve_results_matchups(season, next_day_str, team1, team2, league):
                 'away_record': get_record(away['team_id'], c, next_day_str, season),
                 'game_date':teams[-1]['game_date'], 
                 'home_id': home['team_id'],
-                'away_id':away['team_id']
+                'away_id':away['team_id'],
+                'game_id': game_id
             })
 
 
@@ -533,11 +534,12 @@ def test():
     data = request.get_json()
     selected_games = data.get('selected_games', [])
     selected_league = data.get('selected_league')
-    print(selected_league)
+ 
     selected_model = data.get('selected_model')
-    print(selected_games)
-    print(selected_league)
-
+   
+    #changed 
+    selected_gameIds = data.get('selected_gameIds', [])
+  
 
     if not selected_games:
         return jsonify({'error': 'No games provided'}), 400
@@ -545,39 +547,53 @@ def test():
     sum_cm = [[0,0],[0,0]]
     predictions = {}
 
+    if selected_league == 'NBA':   
+        league_model = 'nba'
+    else:
+        league_model = 'ncaa'
 
+    dates = [date for date in selected_games]
+    team_ids = []
     for date in selected_games:
+        for id in selected_games[date]:
+            team_ids.append(id)
+    
+    
         # if league is NBA cast id to int
-        if selected_league == 'NBA':
-            selected_games[date] = [int(team_id) for team_id in selected_games[date]] 
-            league_model = 'nba'
-        else:
-            league_model = 'ncaa'
-       
-        result = pred_historic_model_old_outcomes_pipeline(
-            selected_model, 
-            league_model,
-            '2024-25', 
-            0, 
-            target_team_ids=selected_games[date], 
-            target_game_date=date
+    print("____________________________")
+    print("version: " + selected_model)
+
+    print("league: " + league_model)
+
+    print(team_ids)
+
+    print(dates)
+
+    print(selected_gameIds)
+    print("____________________________")
+    result = pred_historic_model_old_outcomes_pipeline(
+        version = selected_model, 
+        league = league_model,
+        season_year = '2024-25', 
+        target_team_ids=team_ids, 
+        target_game_dates=dates,
+        target_game_ids=selected_gameIds
         )
+    
 
-        #if result is None or any(r is None for r in result):
-        #    print(f"No prediction results for date {date}")
-        #    continue  # or handle it however you'd like
+       
 
-        outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = result
-
+    outcomes_preds, accs, recalls, precisions, f1s, cms, extra_metrics = result
+    for date in selected_games:
         sum_cm[0][0] += int(cms[0][0])
         sum_cm[0][1] += int(cms[0][1])
         sum_cm[1][0] += int(cms[1][0])
         sum_cm[1][1] += int(cms[1][1])
-        
+            
         predictions[date] = []
+            
         for ids in selected_games[date][::2]:
             outcomes = outcomes_preds.get(f'{date}:{ids}', None)
-            
             if not outcomes:
                 predictions[date].append(['Undefined', 'Undefined'])
                 continue
@@ -585,19 +601,18 @@ def test():
             actual_winner = 'Home' if outcomes[0] else 'Away'
             prediction = 'Home' if outcomes[1] else 'Away'
             data = [prediction, actual_winner]
-            
             if selected_model == 'simulation':
                 data.append(outcomes[2])
-    
-            predictions[date].append(data)
 
-            print(predictions)
+            predictions[date].append(data)
 
     return jsonify({'games': predictions,
                     'confusion_matrix': sum_cm,
                     'season': season[-7:],
                     'stats': {'final_acc': 0, 'final_recall': 0, 'final_precision': 0, 'final_f1': 0} # Note needs to be filled with real values. Waiting for Gabriel in case of interface changes
                     })
+
+
 
 @app.route('/get_parlay', methods=['POST'])
 def get_parlay():
